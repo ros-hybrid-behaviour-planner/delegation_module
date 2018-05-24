@@ -1,13 +1,12 @@
-#! /usr/bin/env python2
-
 
 import bisect
 
 
 class Delegation(object):
 
-    def __init__(self, goal):
+    def __init__(self, goal, auction_id):
         self.__goal = goal
+        self.__auction_id = auction_id
         self.__proposals = []
         self.__state = 1  # TODO
 
@@ -18,10 +17,15 @@ class Delegation(object):
         """
         bisect.insort(self.__proposals, proposal)
 
+    def get_auction_id(self):
+        return self.__auction_id
+
     def get_pddl(self):
 
-        # return goal pddl TODO
-        pass
+        # TODO get PDDL info of goal
+        pddlstring = ""     # placeholder
+
+        return pddlstring
 
     def get_best_proposal(self):
         """
@@ -29,6 +33,10 @@ class Delegation(object):
         :return: best proposal
         """
         return self.__proposals[0]
+
+    def reset_proposals(self):
+        self.__proposals = []
+        # TODO myb delete old proposals right
 
 
 class Proposal(object):
