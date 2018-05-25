@@ -1,0 +1,8 @@
+string pddlstring
+string name
+int32 auction_id
+float64 old_proposal
+---
+bool acceptance
+bool still_biding
+float64 new_proposal
