@@ -4,14 +4,15 @@ import bisect
 
 class Delegation(object):
     """
-    Class that represents a possible delegation of a goal
-    It contains all necessary information about this delegation
+    Class that represents a possible delegation of a goal.
+    It contains all necessary information about this delegation.
     """
 
     def __init__(self, goal, auction_id):
         """
         Constructor of an instance of Delegation
-        :param goal: Goal that should be delegated      TODO possibly subject to change
+
+        :param goal: goal that should be delegated      TODO possibly subject to change
         :param auction_id: ID of the delegation/auction
         """
         self.__goal = goal
@@ -23,7 +24,8 @@ class Delegation(object):
     def add_proposal(self, proposal):
         """
         Adds a proposal to the sorted list of proposals of this delegation
-        :param proposal: A proper proposal
+
+        :param proposal: a proper proposal
         """
         bisect.insort(self.__proposals, proposal)
 
@@ -36,7 +38,8 @@ class Delegation(object):
 
     def get_auction_id(self):
         """
-        Gets the ID of this delegation and the correspondig auction
+        Gets the ID of this delegation and the corresponding auction
+
         :return: the ID
         """
         return self.__auction_id
@@ -44,6 +47,7 @@ class Delegation(object):
     def get_goal_representation(self):
         """
         Gets the Representation of the goal of this delegation
+
         :return: the representation of the goal
         """
 
@@ -55,6 +59,7 @@ class Delegation(object):
     def get_best_proposal(self):
         """
         Returns the currently best proposal of this delegation
+
         :return: best proposal
         """
         if len(self.__proposals) == 0:
@@ -72,7 +77,8 @@ class Delegation(object):
     def has_proposals(self):
         """
         Returns if the auction of this delegation has any proposals
-        :return: Boolean
+
+        :return: boolean whether it has proposals or not
         """
         if len(self.__proposals) > 0:
             return True
@@ -81,7 +87,8 @@ class Delegation(object):
     def set_contractor(self, name):
         """
         Sets contractor for this delegation
-        :param name: Name of the contractor, String
+
+        :param name: name of the contractor
         """
         self.__contractor = name
         # TODO change state of delegation
@@ -89,7 +96,8 @@ class Delegation(object):
     def get_contractor(self):
         """
         Gets the name of the contractor of this delegation
-        :return: Name of the contractor, String
+
+        :return: name of the contractor
         """
         # TODO check if a contractor is already chosen
         return self.__contractor
@@ -104,6 +112,7 @@ class Proposal(object):
     def __init__(self, name, value):
         """
         Constructor of an instance of Proposal
+
         :param name: the name of the bidder who made the proposal
         :param value: the proposed cost
         """
@@ -119,14 +128,16 @@ class Proposal(object):
     def get_value(self):
         """
         Returns the value of this proposal
-        :return: value of the proposal, float
+
+        :return: value of the proposal
         """
         return self.__value
 
     def get_name(self):
         """
         Returns name of the bidder, that made this proposal
-        :return: name of the bidder, string
+
+        :return: name of the bidder
         """
         return self.__name
 

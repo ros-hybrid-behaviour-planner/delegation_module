@@ -3,8 +3,9 @@
 import sys
 import rospy
 from task_decomposition_module.msg import CFP
-from task_decomposition_module.srv import Precommit, PrecommitResponse, Propose, ProposeResponse, Failure,\
-    FailureResponse, Terminate, TerminateResponse
+from task_decomposition_module.srv import Precommit, PrecommitResponse, \
+    Propose, ProposeResponse, Failure, FailureResponse, Terminate, \
+    TerminateResponse
 from delegation import Delegation, Proposal
 from task import Task
 
@@ -15,8 +16,8 @@ class DelegationManager(object):
     This class represents the manager for all delegations of this agent.
     It only communicates with other instances of the DelegationManager,
     that represent other agents, and the general manager of its own agent.
-    It handles possible delegations from taking the goal, that could be delegated,
-    to making sure a delegated task is accomplished.
+    It handles possible delegations from taking the goal, that could be
+    delegated, to making sure a delegated task is accomplished.
     """
     """
     The class contains the suffixes for services and the name of the CFP-topic.
@@ -31,7 +32,9 @@ class DelegationManager(object):
     def __init__(self, manager_name=""):
         """
         Constructor for the DelegationManager
-        :param manager_name: Name of this instance of the DelegationManager, should be unique
+
+        :param manager_name: name of this instance of the DelegationManager,
+                should be unique
         """
         self._name = manager_name
         self.__delegations = []
@@ -85,8 +88,9 @@ class DelegationManager(object):
         """
         Callback for terminate service calls
         Terminates currently running task
-        :param request: Request of the Terminate.srv type
-        :return: Empty response
+
+        :param request: request of the Terminate.srv type
+        :return: empty response
         """
 
         rospy.loginfo(str(request.name) + " is trying to terminate the task with his auction id " + str(request.auction_id))
@@ -112,10 +116,13 @@ class DelegationManager(object):
     def __precom_callback(self, request):
         """
         Callback for precommit service call
-        Checks if formerly proposed bid is still accurate and if it should make a new bid
-        If the bid is still accurate the DelegationManager is accepting the task
-        :param request: Request of the Precommit.srv type
-        :return: Response to confirm or take back the old bid and possibly sending a new bid
+        Checks if formerly proposed bid is still accurate and if it should
+        make a new bid. If the bid is still accurate the DelegationManager is
+        accepting the task.
+
+        :param request: request of the Precommit.srv type
+        :return: response to confirm or take back the old bid and possibly
+                sending a new bid
         """
 
         rospy.loginfo(str(request.name) + " sent a precommit for his auction " + str(request.auction_id))
@@ -151,8 +158,9 @@ class DelegationManager(object):
         """
         Callback for propose service call
         Adds proposal to list of proposals
-        :param request: Request of the Propose.srv type
-        :return: Empty response
+
+        :param request: request of the Propose.srv type
+        :return: empty response
         """
 
         rospy.loginfo(str(request.name) + " proposed for my auction " + str(request.auction_id) + " with " + str(request.value))
@@ -165,9 +173,11 @@ class DelegationManager(object):
     def __failure_callback(self, request):
         """
         Callback for failure service call
-        Tries to make a new auction, because the old contractor failed to accomplish the task
-        :param request: Request of the Failure.srv type
-        :return: Empty response
+        Tries to make a new auction, because the old contractor failed to
+        accomplish the task
+
+        :param request: request of the Failure.srv type
+        :return: empty response
         """
 
         rospy.loginfo(str(request.name) + " reported a FAILURE for my auction " + str(request.auction_id))
@@ -186,8 +196,10 @@ class DelegationManager(object):
     def __cfp_callback(self, msg):
         """
         Callback for messages in the CFP topic, defined in self._topic_name
-        Determines if a proposal for this CFP should be made and makes one if appropriate
-        :param msg: Message of the CFP.msg type
+        Determines if a proposal for this CFP should be made and makes one
+        if appropriate
+
+        :param msg: message of the CFP.msg type
         """
 
         rospy.loginfo("Got CFP from " + str(msg.name) + " with ID " + str(msg.auction_id))
@@ -211,9 +223,12 @@ class DelegationManager(object):
     def __send_precom(self, delegation, best_proposal):
         """
         Calls the Precommit service of the winning bidder of this delegation
-        :param delegation: Delegation for which the winner should be called, Delegation
-        :param best_proposal: Proposal of the winner, includes name of the winner, Proposal
-        :return: Response of the service call, includes the acceptance of the bidder or possibly a new proposal
+
+        :param delegation: delegation for which the winner should be called
+        :param best_proposal: proposal of the winner, includes name of the
+                winner
+        :return: response of the service call,
+                includes the acceptance of the bidder or possibly a new proposal
         """
         rospy.wait_for_service(best_proposal.get_name() + self.precom_suffix)
         send_precom = rospy.ServiceProxy(best_proposal.get_name() + self.precom_suffix, Precommit)
@@ -223,7 +238,8 @@ class DelegationManager(object):
     def send_terminate(self, delegation):
         """
         Calls the Terminate service of the current contractor of this delegation
-        :param delegation: The delegation that should be terminated, Delegation
+
+        :param delegation: the delegation that should be terminated
         """
 
         rospy.loginfo("Terminating contract with " + str(delegation.get_contractor()) + " in my auction " + str(delegation.get_auction_id()))
@@ -235,7 +251,9 @@ class DelegationManager(object):
     def _start_auction(self, delegation):
         """
         Starts the auction for this delegation with a CFP message
-        :param delegation: The delegation for which the auction should be started, Delegation
+
+        :param delegation: the delegation for which the auction should be
+                started
         """
 
         delegation.reset_proposals()
@@ -252,9 +270,11 @@ class DelegationManager(object):
 
     def get_delegation(self, auction_id):
         """
-        Gets the delegation with this auction_id or raises an exception if there is no delegation with this id
-        :param auction_id: Auction_id of an existing delegation, Int
-        :return: The relevant delegation, Delegation
+        Gets the delegation with this auction_id or raises an exception if
+        there is no delegation with this id
+
+        :param auction_id: auction_id of an existing delegation
+        :return: the relevant delegation
         """
         for delegation in self.__delegations:
             if delegation.get_auction_id() == auction_id:
@@ -264,16 +284,19 @@ class DelegationManager(object):
     def new_auction_id(self):
         """
         Creates a new auction_id for this instance of the DelegationManager
-        :return: The new auction_id, Int
+
+        :return: The new auction_id
         """
         self.__auction_id += 1
         return self.__auction_id
 
     def delegate(self, goal):       # TODO subject to change, parameter?
         """
-        Makes a delegation for the goal and starts an auction for this delegation
-        :param goal: The goal that should be delegated, Goal TODO stc
-        :return: The auction_id of the auction, Int
+        Makes a delegation for the goal and starts an auction for this
+        delegation
+
+        :param goal: the goal that should be delegated   TODO stc
+        :return: the auction_id of the auction
         """
         new = Delegation(goal, self.new_auction_id())
 
@@ -284,8 +307,10 @@ class DelegationManager(object):
 
     def end_auction(self, delegation):
         """
-        Stops the auction for the given delegation, determines its winner and tries to make him the contractor
-        :param delegation: The delegation of which the auction should end, Delegation
+        Stops the auction for the given delegation, determines its winner and
+        tries to make him the contractor
+
+        :param delegation: the delegation of which the auction should end
         :return: TODO to be determined
         """
 
@@ -324,6 +349,8 @@ class DelegationManager(object):
 
 
 if __name__ == '__main__':
+
+    # TODO this is just for testing purposes right now
 
     name = "Default"
     posting = "True"
