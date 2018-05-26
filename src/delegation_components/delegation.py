@@ -19,6 +19,7 @@ class Delegation(object):
         self.__auction_id = auction_id
         self.__proposals = []
         self.__contractor = ""
+        self.__got_contractor = False
         self.__state = 1  # TODO states of a delegation
 
     def add_proposal(self, proposal):
@@ -90,7 +91,11 @@ class Delegation(object):
 
         :param name: name of the contractor
         """
+        if self.__got_contractor:
+            # TODO raise exception
+            pass
         self.__contractor = name
+        self.__got_contractor = True
         # TODO change state of delegation
 
     def get_contractor(self):
@@ -100,7 +105,16 @@ class Delegation(object):
         :return: name of the contractor
         """
         # TODO check if a contractor is already chosen
+        if not self.__got_contractor:
+            # TODO raise exception
+            pass
         return self.__contractor
+
+    def fail_current_delegation(self):
+
+        self.__contractor = ""
+        self.__got_contractor = False
+        # TODO change state
 
 
 class Proposal(object):
