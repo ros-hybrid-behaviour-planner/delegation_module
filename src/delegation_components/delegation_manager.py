@@ -50,8 +50,7 @@ class DelegationManager(object):
         self.__init_topics()
         self.__init_services()
 
-
-        self.__loginfo("Initiated DelelgationManager with name " + str(manager_name))
+        self.__loginfo("Initiated DelelgationManager")
 
     def __init_topics(self):
         """
@@ -103,9 +102,21 @@ class DelegationManager(object):
     # ------ Logging Functions ------
 
     def __loginfo(self, string):
+        """
+        Rospy info logging with information about who is logging
+
+        :param string: Message to log
+        """
+
         rospy.loginfo(str(self._name) + ": " + str(string))
 
     def __logwarn(self, string):
+        """
+        Rospy warn logging with information about who is logging
+
+        :param string: Message to log
+        """
+
         rospy.logwarn(str(self._name) + ": " + str(string))
 
     # ------ Callback functions ------
@@ -286,29 +297,30 @@ class DelegationManager(object):
             self.__logwarn("Propose call failed")
             raise
 
-    def __send_precom(self, delegation, proposal):
+    def __send_precom(self, target_name, auction_id, proposal_value, goal_represenation):
         """
         Calls the Precommit service of the winning bidder of this delegation
 
-        :param delegation: delegation for which the winner should be called
-        :param proposal: proposal of the winner, includes name of the
-                winner
+        :param target_name: name of the bidder who gets the precom
+        :param auction_id: ID of the corresponding auction
+        :param proposal_value: proposed value
+        :param goal_represenation: represenation of the goal for this auction
         :return: response of the service call,
                 includes the acceptance of the bidder or possibly a new proposal
         :raises ServiceException: if call failed
         """
 
-        self.__loginfo("Sending a precommit to " + str(proposal.get_name()) + " for my auction " + str(delegation.get_auction_id()))
+        self.__loginfo("Sending a precommit to " + str(target_name) + " for my auction " + str(auction_id))
 
         try:
-            rospy.wait_for_service(proposal.get_name() + self.precom_suffix)
+            rospy.wait_for_service(target_name + self.precom_suffix)
         except rospy.ROSException:
-            self.__logwarn("Waiting to long for service: " + str(proposal.get_name() + self.precom_suffix))
+            self.__logwarn("Waiting to long for service: " + str(target_name + self.precom_suffix))
             raise rospy.ServiceException()
 
         try:
-            send_precom = rospy.ServiceProxy(proposal.get_name() + self.precom_suffix, Precommit)
-            response = send_precom(delegation.get_goal_representation(), self._name, delegation.get_auction_id(), proposal.get_value())
+            send_precom = rospy.ServiceProxy(target_name + self.precom_suffix, Precommit)
+            response = send_precom(goal_represenation, self._name, auction_id, proposal_value)
         except rospy.ServiceException:
             self.__logwarn("Precommit call failed")
             raise
@@ -430,6 +442,22 @@ class DelegationManager(object):
 
     # ------ Make auctions etc ------
 
+    def __precom(self, proposal, delegation):
+        """
+        Sends a precom call for the delegation with this proposal
+        Wrapper for the call
+
+        :param proposal: the proposal that won
+        :param delegation: the delegation with this proposal
+        :return: response of the call
+        """
+
+        response = self.__send_precom(proposal.get_name(),
+                                      delegation.get_auction_id(),
+                                      proposal.get_value(),
+                                      delegation.get_goal_representation())
+        return response
+
     def __start_auction(self, delegation):
         """
         Starts the auction for this delegation with a CFP message
@@ -447,6 +475,7 @@ class DelegationManager(object):
     def terminate(self, delegation):
         """
         Calls the Terminate service of the current contractor of this delegation
+        Wrapper for the call
 
         :param delegation: the delegation that should be terminated
         """
@@ -458,6 +487,7 @@ class DelegationManager(object):
     def failure(self):
         """
         Sends a Failure service-call for the current task
+        Wrapper for the call
         """
 
         self.__send_failure(self.__running_task.get_auctioneer_name(), self.__running_task.get_auction_id())
@@ -480,6 +510,8 @@ class DelegationManager(object):
         self.__delegations.append(new)
         self.__start_auction(new)
 
+        # TODO myb start a thread in which is waited for a the proposals...
+        
         return new.get_auction_id()
 
     def end_auction(self, delegation):
@@ -488,22 +520,18 @@ class DelegationManager(object):
         tries to make him the contractor
 
         :param delegation: the delegation of which the auction should end
-        :return: TODO to be determined
+        :return: TODO to be determined, if any
         """
 
-        not_delegated = True
+        up_for_delegation = True
 
-        while not_delegated:
-
-            if not delegation.has_proposals():
-                # TODO myb different handling if no proposals are there
-                return False
+        while delegation.has_proposals() and up_for_delegation:
 
             best_proposal = delegation.get_best_proposal()
             self.__loginfo("Sending a precommit to " + str(best_proposal.get_name()) + " who bid " + str(best_proposal.get_value()) + " for my auction " + str(delegation.get_auction_id()))
 
             try:
-                response = self.__send_precom(delegation, best_proposal)
+                response = self.__precom(best_proposal, delegation)
             except rospy.ServiceException:
                 # if the best bid is not reachable, try next best bid, instead of giving up auction
                 self.__logwarn("Precommit failed, trying next best Bidder if applicable")
@@ -511,12 +539,16 @@ class DelegationManager(object):
                 continue
 
             if response.acceptance:
-                # TODO send goal to contractor
 
                 self.__loginfo(str(best_proposal.get_name()) + " has accepted the contract for a cost of " + str(best_proposal.get_value()) + " for my auction " + str(delegation.get_auction_id()))
                 delegation.set_contractor(best_proposal.get_name())
 
-                not_delegated = False
+                # TODO send goal to contractor
+
+                # TODO set delegation status right
+
+                # Contractor has been found
+                up_for_delegation = False
 
             elif response.still_biding:
 
@@ -528,6 +560,10 @@ class DelegationManager(object):
 
                 self.__loginfo(str(best_proposal.get_name()) + " has stopped biding for my auction " + str(delegation.get_auction_id()))
                 delegation.remove_proposal(best_proposal)
+
+        if up_for_delegation:
+            self.__logwarn("No possible contractor has been found for my auction " + str(delegation.get_auction_id()))
+            # TODO Right handling, possible: send new CFP, give up or myb depending on needed delegation or just possible delegation
 
 
 if __name__ == '__main__':
