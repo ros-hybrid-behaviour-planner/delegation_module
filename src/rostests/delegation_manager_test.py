@@ -57,7 +57,7 @@ class DelegationManagerTest1(unittest.TestCase):
 
         test_delegation = self.delegation_manager.get_delegation(test_id)
 
-        self.delegation_manager.send_terminate(test_delegation)
+        self.delegation_manager.terminate(test_delegation)
 
         rospy.sleep(2)
 
@@ -83,7 +83,7 @@ class DelegationManagerTest1(unittest.TestCase):
 
         test_delegation = self.delegation_manager.get_delegation(test_id)
 
-        self.delegation_manager.send_failure()
+        self.delegation_manager.failure()
 
         rospy.sleep(2)
 
