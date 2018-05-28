@@ -209,7 +209,10 @@ class DelegationManager(object):
             return ProposeResponse()
 
         new_proposal = Proposal(request.name, request.value)
-        delegation.add_proposal(new_proposal)
+        try:
+            delegation.add_proposal(new_proposal)
+        except Warning:
+            self.__loginfo("Proposal from " + new_proposal.get_name() + " wont be added, he is forbidden")
 
         return ProposeResponse()
 
@@ -232,7 +235,11 @@ class DelegationManager(object):
             self.__logwarn("Failure Message for not existing delegation")
             return response
 
-        # TODO make sure old contractor doesnt get this contract again
+        if delegation.get_contractor() != request.name:
+            self.__logwarn("Failure Message from source who is not its contractor")
+            return response
+
+        delegation.forbid_bidder(request.name)
         delegation.fail_current_delegation()
         self.__start_auction(delegation)
 
@@ -437,7 +444,12 @@ class DelegationManager(object):
         """
 
         self.__auction_id += 1
-        # TODO safeguard against overflows
+
+        uint32_max = 2**32 - 1
+        if self.__auction_id > uint32_max:
+            self.__logwarn("Space for auction IDs is exhausted, starting with 0 again")
+            self.__auction_id = 0
+
         return self.__auction_id
 
     # ------ Make auctions etc ------
@@ -511,7 +523,7 @@ class DelegationManager(object):
         self.__start_auction(new)
 
         # TODO myb start a thread in which is waited for a the proposals...
-        
+
         return new.get_auction_id()
 
     def end_auction(self, delegation):
@@ -554,7 +566,10 @@ class DelegationManager(object):
 
                 self.__loginfo(str(best_proposal.get_name()) + " has given a new proposal of " + str(response.new_proposal) + " for my auction " + str(delegation.get_auction_id()))
                 delegation.remove_proposal(best_proposal)
-                delegation.add_proposal(Proposal(best_proposal.get_name, response.new_proposal))
+                try:
+                    delegation.add_proposal(Proposal(best_proposal.get_name(), response.new_proposal))
+                except Warning:
+                    self.__loginfo("Proposal from " + best_proposal.get_name() + " wont be added, he is forbidden")
 
             else:
 

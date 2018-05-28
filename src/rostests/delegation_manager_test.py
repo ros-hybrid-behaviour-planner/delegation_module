@@ -87,7 +87,7 @@ class DelegationManagerTest1(unittest.TestCase):
 
         rospy.sleep(2)
 
-        self.assertTrue(test_delegation.has_proposals())
+        self.assertFalse(test_delegation.has_proposals())
         self.assertEqual(test_delegation.get_contractor(), "")
 
         self.delegation_manager.__del__()

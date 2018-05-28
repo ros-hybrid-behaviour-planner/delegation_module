@@ -18,6 +18,7 @@ class Delegation(object):
         self.__goal = goal
         self.__auction_id = auction_id
         self.__proposals = []
+        self.__forbidden_bidders = []
         self.__contractor = ""
         self.__got_contractor = False
         self.__state = 1  # TODO states of a delegation
@@ -27,7 +28,11 @@ class Delegation(object):
         Adds a proposal to the sorted list of proposals of this delegation
 
         :param proposal: a proper proposal
+        :raises Warning: if bidder of this proposal is forbidden
         """
+
+        if self.__forbidden_bidders.__contains__(proposal.get_name()):
+            raise Warning("Proposal wont be added, bidder is forbidden")
         bisect.insort(self.__proposals, proposal)
 
     def remove_proposal(self, proposal):
@@ -63,7 +68,7 @@ class Delegation(object):
 
         :return: best proposal
         """
-        if len(self.__proposals) == 0:
+        if self.has_proposals():
             # TODO raise Exception
             print "Got no Proposals"
         return self.__proposals[0]
@@ -84,6 +89,43 @@ class Delegation(object):
         if len(self.__proposals) > 0:
             return True
         return False
+
+    def forbid_bidder(self, name):
+        """
+        Puts this name on the forbidden list, no proposals from this source
+        allowed
+
+        :param name: name of the forbidden bidder
+        """
+
+        self.__forbidden_bidders.append(name)
+
+    def is_forbidden(self, name):
+        """
+        Returns whether the name is on the forbidden list or not
+
+        :param name: name of the bidder
+        :return: whether the name is on the forbidden list or not
+        """
+
+        return self.__forbidden_bidders.__contains__(name)
+
+    def reset_forbidden(self):
+        """
+        Resets the list of forbidden bidders
+        """
+
+        self.__forbidden_bidders = []
+
+    def allow_bidder(self, name):
+        """
+        Allows bidder if he was formerly forbidden, else does nothing
+
+        :param name: name of the bidder
+        """
+
+        if self.__forbidden_bidders.__contains__(name):
+            self.__forbidden_bidders.remove(name)
 
     def set_contractor(self, name):
         """
