@@ -6,7 +6,7 @@ from task_decomposition_module.msg import CFP
 from task_decomposition_module.srv import Precommit, PrecommitResponse, \
     Propose, ProposeResponse, Failure, FailureResponse, Terminate, \
     TerminateResponse
-from delegation import Delegation, Proposal
+from delegation import Delegation, Proposal, DelegationState
 from task import Task
 
 
@@ -18,8 +18,7 @@ class DelegationManager(object):
     that represent other agents, and the general manager of its own agent.
     It handles possible delegations from taking the goal, that could be
     delegated, to making sure a delegated task is accomplished.
-    """
-    """
+
     The class contains the suffixes for services and the name of the CFP-topic.
     These have to be the same for all instances of the class.
     """
@@ -81,6 +80,8 @@ class DelegationManager(object):
         self.__stop_services()
         self.__stop_topics()
 
+        del self.__delegations[:]
+
     def __stop_services(self):
         """
         Shuts all services down
@@ -124,6 +125,7 @@ class DelegationManager(object):
     def __terminate_callback(self, request):
         """
         Callback for terminate service calls
+
         Terminates currently running task
 
         :param request: request of the Terminate.srv type
@@ -136,9 +138,11 @@ class DelegationManager(object):
 
         # check if the terminated task is really running
         if not self._got_task:
+            self.__logwarn("Termination for a task, that i dont have")
             return response
         if self.__running_task.get_auction_id() != request.auction_id \
                 or self.__running_task.get_auctioneer_name() != request.name:
+            self.__logwarn("Termination for a task, that i dont have")
             return response
 
         self.__loginfo("Stopping currently running task")
@@ -153,6 +157,7 @@ class DelegationManager(object):
     def __precom_callback(self, request):
         """
         Callback for precommit service call
+
         Checks if formerly proposed bid is still accurate and if it should
         make a new bid. If the bid is still accurate the DelegationManager is
         accepting the task.
@@ -174,9 +179,16 @@ class DelegationManager(object):
 
         # TODO recheck cost and possibility
         new_cost = 5    # placeholder
+        possibile_goal = True   # placeholder
+
+        if not possibile_goal:
+            self.__loginfo("Earlier proposal can not be verfied, goal currently not possible")
+            response.acceptance = False
+            response.still_biding = False
+            response.new_proposal = 0
+            return response
 
         if new_cost <= request.old_proposal:
-
             self.__loginfo("Have accepted a contract from " + str(request.name))
             response.acceptance = True
             new_task = Task(request.auction_id, request.name)
@@ -194,6 +206,7 @@ class DelegationManager(object):
     def __propose_callback(self, request):
         """
         Callback for propose service call
+
         Adds proposal to list of proposals
 
         :param request: request of the Propose.srv type
@@ -219,6 +232,7 @@ class DelegationManager(object):
     def __failure_callback(self, request):
         """
         Callback for failure service call
+
         Tries to make a new auction, because the old contractor failed to
         accomplish the task
 
@@ -235,6 +249,12 @@ class DelegationManager(object):
             self.__logwarn("Failure Message for not existing delegation")
             return response
 
+        try:
+            delegation.get_contractor()
+        except NameError:
+            self.__logwarn("Failure Message for delegation without contractor")
+            return response
+
         if delegation.get_contractor() != request.name:
             self.__logwarn("Failure Message from source who is not its contractor")
             return response
@@ -248,6 +268,7 @@ class DelegationManager(object):
     def __cfp_callback(self, msg):
         """
         Callback for messages in the CFP topic, defined in self._topic_name
+
         Determines if a proposal for this CFP should be made and makes one
         if appropriate
 
@@ -457,6 +478,7 @@ class DelegationManager(object):
     def __precom(self, proposal, delegation):
         """
         Sends a precom call for the delegation with this proposal
+
         Wrapper for the call
 
         :param proposal: the proposal that won
@@ -480,6 +502,8 @@ class DelegationManager(object):
 
         delegation.reset_proposals()
 
+        delegation.state.set_waiting_for_proposal()
+
         self.__loginfo("Starting auction with ID: " + str(delegation.get_auction_id()))
 
         self.__send_cfp(delegation.get_goal_representation(), delegation.get_auction_id())
@@ -487,6 +511,9 @@ class DelegationManager(object):
     def terminate(self, delegation):
         """
         Calls the Terminate service of the current contractor of this delegation
+
+        Changes the state of the delegation to finished
+
         Wrapper for the call
 
         :param delegation: the delegation that should be terminated
@@ -496,9 +523,12 @@ class DelegationManager(object):
 
         self.__send_terminate(delegation.get_contractor(), delegation.get_auction_id())
 
+        delegation.state.set_finished()
+
     def failure(self):
         """
         Sends a Failure service-call for the current task
+
         Wrapper for the call
         """
 
@@ -539,7 +569,12 @@ class DelegationManager(object):
 
         while delegation.has_proposals() and up_for_delegation:
 
-            best_proposal = delegation.get_best_proposal()
+            try:
+                best_proposal = delegation.get_best_proposal()
+            except NameError:
+                self.__logwarn("Delegation with auction id " + str(delegation.get_auction_id()) + " has no proposals")
+                break
+
             self.__loginfo("Sending a precommit to " + str(best_proposal.get_name()) + " who bid " + str(best_proposal.get_value()) + " for my auction " + str(delegation.get_auction_id()))
 
             try:
@@ -553,7 +588,13 @@ class DelegationManager(object):
             if response.acceptance:
 
                 self.__loginfo(str(best_proposal.get_name()) + " has accepted the contract for a cost of " + str(best_proposal.get_value()) + " for my auction " + str(delegation.get_auction_id()))
-                delegation.set_contractor(best_proposal.get_name())
+
+                try:
+                    delegation.set_contractor(best_proposal.get_name())
+                except NameError:
+                    self.__logwarn("Contractor has already been chosen, while i am trying to find one")
+                    up_for_delegation = False
+                    break
 
                 # TODO send goal to contractor
 
@@ -583,7 +624,7 @@ class DelegationManager(object):
 
 if __name__ == '__main__':
 
-    # TODO this is just for testing purposes right now, just a passive manager
+    # TODO this is just for testing purposes right now a passive manager
 
     name = "Default"
 

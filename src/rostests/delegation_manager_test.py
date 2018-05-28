@@ -47,7 +47,7 @@ class DelegationManagerTest1(unittest.TestCase):
 
             test_delegation = self.delegation_manager.get_delegation(del_id)
 
-            rospy.sleep(5)
+            rospy.sleep(3)
 
             self.delegation_manager.end_auction(test_delegation)
 
@@ -87,10 +87,8 @@ class DelegationManagerTest1(unittest.TestCase):
 
         rospy.sleep(2)
 
-        self.assertFalse(test_delegation.has_proposals())
-        self.assertEqual(test_delegation.get_contractor(), "")
+        self.assertTrue(test_delegation.state.is_waiting_for_proposals())
 
-        self.delegation_manager.__del__()
 
 
 if __name__ == '__main__':
