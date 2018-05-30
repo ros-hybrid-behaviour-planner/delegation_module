@@ -8,15 +8,18 @@ class Delegation(object):
     It contains all necessary information about this delegation.
     """
 
-    def __init__(self, goal, auction_id):
+    def __init__(self, goal, auction_id, auction_steps = 3):
         """
         Constructor of an instance of Delegation
 
+        :param auction_steps:
         :param goal: goal that should be delegated      TODO possibly subject to change
         :param auction_id: ID of the delegation/auction
         """
         self.__goal = goal
         self.__auction_id = auction_id
+        self.__auction_steps_max = auction_steps
+        self.__auction_steps = auction_steps
         self.__proposals = []
         self.__forbidden_bidders = []
         self.__contractor = ""
@@ -48,7 +51,8 @@ class Delegation(object):
 
     def remove_proposal(self, proposal):
         """
-        Removes the given proposal for this delegation
+        Removes the given proposal for this delegation,
+        the list of proposals stays sorted
 
         :param proposal: The Proposal that should be removed
         """
@@ -62,6 +66,24 @@ class Delegation(object):
         """
 
         return self.__auction_id
+
+    def decrement_and_check_steps(self):
+        """
+        Decrements current auction_steps and checks if the all steps are finished
+
+        :return: Whether the auction has waited all steps or not
+        """
+
+        self.__auction_steps -= 1
+
+        return self.__auction_steps == 0
+
+    def reset_steps(self):
+        """
+        Resets the current auction_steps to the defined max-value
+        """
+
+        self.__auction_steps = self.__auction_steps_max
 
     def get_goal_representation(self):
         """

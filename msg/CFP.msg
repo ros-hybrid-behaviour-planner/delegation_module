@@ -1,3 +1,3 @@
-string pddlstring
+string goal_representation
 string name
 uint32 auction_id

@@ -8,6 +8,7 @@ from task_decomposition_module.srv import Precommit, PrecommitResponse, \
     TerminateResponse
 from delegation import Delegation, Proposal, DelegationState
 from task import Task
+from cost_computing import PDDLCostEvaluator
 
 
 class DelegationManager(object):
@@ -30,12 +31,14 @@ class DelegationManager(object):
 
     # ------ Initiation methods ------
 
-    def __init__(self, manager_name=""):
+    def __init__(self, manager_name="", taking_tasks_possible=False, cost_function_evaluator=None):
         """
         Constructor for the DelegationManager
 
         :param manager_name: name of this instance of the DelegationManager,
                 should be unique
+        :param taking_tasks_possible: whether this is instance can actually
+                take tasks or just delegate them
         """
 
         self._name = manager_name
@@ -43,6 +46,10 @@ class DelegationManager(object):
         self.__delegations = []
         self.__auction_id = 0
 
+        self.__taking_tasks_possible = taking_tasks_possible
+        if taking_tasks_possible and cost_function_evaluator is None:
+            rospy.logerr("Initiating a DelegationManager, that has to be able to take tasks without a cost-function!")
+        self.__cost_function_evaluator = cost_function_evaluator
         self._got_task = False      # TODO myb more than one at the same time
         self.__running_task = None
 
@@ -171,18 +178,17 @@ class DelegationManager(object):
 
         response = PrecommitResponse()
 
-        if self._got_task:
+        if self._got_task or not self.__taking_tasks_possible:
+            self.__loginfo("Taking a task is currently not possible")
             response.acceptance = False
             response.still_biding = False
             response.new_proposal = 0
             return response
 
-        # TODO recheck cost and possibility
-        new_cost = 5    # placeholder
-        possibile_goal = True   # placeholder
+        new_cost, possible_goal = self.__cost_function_evaluator(request.goal_representation)
 
-        if not possibile_goal:
-            self.__loginfo("Earlier proposal can not be verfied, goal currently not possible")
+        if not possible_goal:
+            self.__loginfo("Earlier proposal can not be verified, goal currently not possible")
             response.acceptance = False
             response.still_biding = False
             response.new_proposal = 0
@@ -279,15 +285,16 @@ class DelegationManager(object):
 
         # TODO should i bid this way for my OWN auctions?
 
+        if not self.__taking_tasks_possible:
+            # Not bidding if i cannot perform tasks in general
+            return
+
         if self._got_task:
             # not bidding while running tasks for someone else
             self.__loginfo("Wont bid, because i already have a task")
             return
 
-        # TODO try planning, compute cost
-
-        cost = 5    # placeholder
-        possible_goal = True    # placeholder
+        cost, possible_goal = self.__cost_function_evaluator(msg.goal_representation)
 
         if possible_goal:
             self.__loginfo("Sending a proposal of " + str(cost))
@@ -416,7 +423,7 @@ class DelegationManager(object):
         self.__loginfo("Sending a CFP for my auction " + str(auction_id))
 
         msg = CFP()
-        msg.pddlstring = goal_representation
+        msg.goal_representation = goal_representation
         msg.name = self._name
         msg.auction_id = auction_id
 
@@ -466,6 +473,7 @@ class DelegationManager(object):
 
         self.__auction_id += 1
 
+        # check that the auction_id is usable in ROS msgs/services
         uint32_max = 2**32 - 1
         if self.__auction_id > uint32_max:
             self.__logwarn("Space for auction IDs is exhausted, starting with 0 again")
@@ -500,8 +508,9 @@ class DelegationManager(object):
                 started
         """
 
+        # Making sure that the delegation is in the right state
         delegation.reset_proposals()
-
+        delegation.reset_steps()
         delegation.state.set_waiting_for_proposal()
 
         self.__loginfo("Starting auction with ID: " + str(delegation.get_auction_id()))
@@ -538,25 +547,42 @@ class DelegationManager(object):
         self._got_task = False
         self.__running_task = None
 
-    def delegate(self, goal):       # TODO subject to change, parameter?
+    def delegate(self, goal, auction_steps=3):       # TODO subject to change, parameter?
         """
         Makes a delegation for the goal and starts an auction for this
         delegation
 
+        :param auction_steps: number of steps
+                that are waited for proposals while the auction is running
         :param goal: the goal that should be delegated   TODO stc
         :return: the auction_id of the auction
         """
 
-        new = Delegation(goal, self.get_new_auction_id())
+        new = Delegation(goal, self.get_new_auction_id(), auction_steps)
 
         self.__delegations.append(new)
         self.__start_auction(new)
 
-        # TODO myb start a thread in which is waited for a the proposals...
-
         return new.get_auction_id()
 
-    def end_auction(self, delegation):
+    def do_step(self):
+        """
+        Does a step, meaning all delegations that are currently waiting
+        for proposals are checked if their auction should end and those
+        auctions are terminated
+
+        """
+
+        self.__loginfo("Doing a step")
+
+        waiting_delegations = [d for d in self.__delegations if d.state.is_waiting_for_proposals()]
+
+        for delegation in waiting_delegations:
+
+            if delegation.decrement_and_check_steps():
+                self.__end_auction(delegation)
+
+    def __end_auction(self, delegation):
         """
         Stops the auction for the given delegation, determines its winner and
         tries to make him the contractor
@@ -564,6 +590,8 @@ class DelegationManager(object):
         :param delegation: the delegation of which the auction should end
         :return: TODO to be determined, if any
         """
+
+        self.__loginfo("Trying to end Auction with ID " + str(delegation.get_auction_id()))
 
         up_for_delegation = True
 
@@ -590,15 +618,14 @@ class DelegationManager(object):
                 self.__loginfo(str(best_proposal.get_name()) + " has accepted the contract for a cost of " + str(best_proposal.get_value()) + " for my auction " + str(delegation.get_auction_id()))
 
                 try:
+                    # set contractor and change delegation state
                     delegation.set_contractor(best_proposal.get_name())
                 except NameError:
                     self.__logwarn("Contractor has already been chosen, while i am trying to find one")
                     up_for_delegation = False
                     break
 
-                # TODO send goal to contractor
-
-                # TODO set delegation status right
+                # TODO send goal to contractor via funtioncall or creating a proper online goal with the right manager_prefix
 
                 # Contractor has been found
                 up_for_delegation = False
@@ -619,6 +646,7 @@ class DelegationManager(object):
 
         if up_for_delegation:
             self.__logwarn("No possible contractor has been found for my auction " + str(delegation.get_auction_id()))
+
             # TODO Right handling, possible: send new CFP, give up or myb depending on needed delegation or just possible delegation
 
 

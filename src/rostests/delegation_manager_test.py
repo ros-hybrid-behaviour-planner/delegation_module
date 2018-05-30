@@ -29,11 +29,10 @@ class DelegationManagerTest1(unittest.TestCase):
 
         test_delegation = self.delegation_manager.get_delegation(del_id)
 
-        rospy.sleep(5)
+        for i in range(5):
 
-        self.delegation_manager.end_auction(test_delegation)
-
-        rospy.sleep(2)
+            self.delegation_manager.do_step()
+            rospy.sleep(1)
 
         self.assertNotEqual(test_delegation.get_contractor(), "")
 
@@ -47,11 +46,9 @@ class DelegationManagerTest1(unittest.TestCase):
 
             test_delegation = self.delegation_manager.get_delegation(del_id)
 
-            rospy.sleep(3)
-
-            self.delegation_manager.end_auction(test_delegation)
-
-            rospy.sleep(2)
+            for i in range(5):
+                self.delegation_manager.do_step()
+                rospy.sleep(1)
 
         test_id = self.delegation_manager.get_task().get_auction_id()
 
@@ -59,7 +56,7 @@ class DelegationManagerTest1(unittest.TestCase):
 
         self.delegation_manager.terminate(test_delegation)
 
-        rospy.sleep(2)
+        rospy.sleep(1)
 
         self.assertFalse(self.delegation_manager._got_task)
 
@@ -73,11 +70,9 @@ class DelegationManagerTest1(unittest.TestCase):
 
             test_delegation = self.delegation_manager.get_delegation(del_id)
 
-            rospy.sleep(2)
-
-            self.delegation_manager.end_auction(test_delegation)
-
-            rospy.sleep(2)
+            for i in range(5):
+                self.delegation_manager.do_step()
+                rospy.sleep(1)
 
         test_id = self.delegation_manager.get_task().get_auction_id()
 
@@ -85,10 +80,9 @@ class DelegationManagerTest1(unittest.TestCase):
 
         self.delegation_manager.failure()
 
-        rospy.sleep(2)
+        rospy.sleep(1)
 
         self.assertTrue(test_delegation.state.is_waiting_for_proposals())
-
 
 
 if __name__ == '__main__':
