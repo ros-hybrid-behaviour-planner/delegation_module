@@ -650,6 +650,23 @@ class DelegationManager(object):
             # TODO Right handling, possible: send new CFP, give up or myb depending on needed delegation or just possible delegation
 
 
+class DelegationManagerSingleton(object):
+    __instance = None
+
+    def __init__(self, manager_name="", taking_tasks_possible=False, cost_function_evaluator=None):
+        if self.__instance is None:
+            __instance = DelegationManager(manager_name=manager_name, taking_tasks_possible=taking_tasks_possible, cost_function_evaluator=cost_function_evaluator)
+        else:
+            # TODO myb change DelegationManager if formerly taking_tasks was false and this one is true
+            pass
+
+    def get_instance(self):
+        if self.__instance is None:
+            pass
+            # TODO raise right exception
+        return self.__instance
+
+
 if __name__ == '__main__':
 
     # TODO this is just for testing purposes right now a passive manager

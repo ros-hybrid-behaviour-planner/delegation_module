@@ -202,3 +202,4 @@ catkin_add_nosetests(src/rostests)
 
 find_package(rostest REQUIRED)
 add_rostest(test/delegation_manager_test.test)
+add_rostest(test/cost_computing_test.test)

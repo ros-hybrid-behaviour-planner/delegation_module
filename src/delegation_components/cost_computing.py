@@ -1,8 +1,5 @@
 
 
-from behaviour_components.managers import Manager
-
-
 class AbstractCostEvaluator(object):
     """
     Base Class for evaluators of cost functions for a DelegationManager
@@ -52,10 +49,24 @@ class PDDLCostEvaluator(AbstractCostEvaluator):
     """
 
     def __init__(self, planning_function):
+        """
+        Constructor
+
+        :param planning_function: functionpointer on a function, that
+                returns a PDDL plan and takes a goal-statement as input
+        """
         super(PDDLCostEvaluator, self).__init__()
         self.__planning_function = planning_function
 
     def compute_cost_and_possibility(self, goal_representation):
+        """
+        Computes cost and possibility of a goal given its statement.
+        This is accomplished by trying to plan with the PDDL-planing-function
+        and using this plan to extract cost/possibility
+
+        :param goal_representation:
+        :return:
+        """
 
         possible = False
         cost = -1
@@ -71,7 +82,17 @@ class PDDLCostEvaluator(AbstractCostEvaluator):
         return cost, possible
 
     def __compute_cost(self, plan):
+        """
+        Extract all needed information out of the plan and
+        computes cost
+
+        :param plan: proper PDDL plan
+        :return: the cost that was computed
+        """
         steps = plan["cost"]
+
+        print("Plan:")
+        print(plan)
 
         # TODO create smart heuristic for cost based on steps and possible other stuff
 
