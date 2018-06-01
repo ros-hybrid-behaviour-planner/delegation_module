@@ -8,15 +8,15 @@ class Delegation(object):
     It contains all necessary information about this delegation.
     """
 
-    def __init__(self, goal, auction_id, auction_steps = 3):
+    def __init__(self, goal_wrapper, auction_id, auction_steps=3):
         """
         Constructor of an instance of Delegation
 
-        :param auction_steps:
-        :param goal: goal that should be delegated      TODO possibly subject to change
+        :param auction_steps: steps that are waited for proposals
+        :param goal_wrapper: goal that should be delegated
         :param auction_id: ID of the delegation/auction
         """
-        self.__goal = goal
+        self.__goal_wrapper = goal_wrapper
         self.__auction_id = auction_id
         self.__auction_steps_max = auction_steps
         self.__auction_steps = auction_steps
@@ -34,7 +34,7 @@ class Delegation(object):
         del self.__proposals[:]
         del self.__forbidden_bidders[:]
         del self.state
-        # TODO delete goal, depending on implementation
+        del self.__goal_wrapper
 
     def add_proposal(self, proposal):
         """
@@ -47,7 +47,7 @@ class Delegation(object):
         if self.__forbidden_bidders.__contains__(proposal.get_name()):
             raise Warning("Proposal wont be added, bidder is forbidden")
 
-        bisect.insort(self.__proposals, proposal)
+        bisect.insort(a=self.__proposals, x=proposal)
 
     def remove_proposal(self, proposal):
         """
@@ -92,10 +92,8 @@ class Delegation(object):
         :return: the representation of the goal
         """
 
-        # TODO get PDDL info of goal
-        pddlstring = ""     # placeholder
-
-        return pddlstring
+        goal_representation = self.__goal_wrapper.get_goal_representation()
+        return goal_representation
 
     def get_best_proposal(self):
         """
@@ -203,6 +201,11 @@ class Delegation(object):
         self.__contractor = ""
         self.__got_contractor = False
         self.state.set_waiting_for_proposal()
+
+    def send_goal(self, name):
+
+        self.__goal_wrapper.send_goal(name=name)
+        # TODO myb catch exceptions
 
 
 class Proposal(object):
@@ -349,4 +352,3 @@ class DelegationState(object):
         """
 
         self.__state_id = 3
-

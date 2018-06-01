@@ -19,6 +19,7 @@ class AbstractCostEvaluator(object):
 
         :return: the last computed cost
         """
+
         return self.__last_cost
 
     def get_possibility(self):
@@ -28,6 +29,7 @@ class AbstractCostEvaluator(object):
         :return: whether in last computation the
                 task was possible
         """
+
         return self.__last_possibility
 
     def compute_cost_and_possibility(self, goal_representation):
@@ -39,6 +41,7 @@ class AbstractCostEvaluator(object):
                 that should be fulfilled
         :return: Cost, Possibility (Float, Boolean)
         """
+
         raise NotImplementedError
 
 
@@ -55,6 +58,7 @@ class PDDLCostEvaluator(AbstractCostEvaluator):
         :param planning_function: functionpointer on a function, that
                 returns a PDDL plan and takes a goal-statement as input
         """
+
         super(PDDLCostEvaluator, self).__init__()
         self.__planning_function = planning_function
 
@@ -89,6 +93,7 @@ class PDDLCostEvaluator(AbstractCostEvaluator):
         :param plan: proper PDDL plan
         :return: the cost that was computed
         """
+
         steps = plan["cost"]
 
         print("Plan:")

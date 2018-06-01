@@ -6,13 +6,11 @@ from task_decomposition_module.msg import CFP
 from task_decomposition_module.srv import Precommit, PrecommitResponse, \
     Propose, ProposeResponse, Failure, FailureResponse, Terminate, \
     TerminateResponse
-from delegation import Delegation, Proposal, DelegationState
+from delegation import Delegation, Proposal
 from task import Task
-from cost_computing import PDDLCostEvaluator
 
 
 class DelegationManager(object):
-    # TODO more a declaration of intent than an actual documentation
     """
     This class represents the manager for all delegations of this agent.
     It only communicates with other instances of the DelegationManager,
@@ -23,6 +21,7 @@ class DelegationManager(object):
     The class contains the suffixes for services and the name of the CFP-topic.
     These have to be the same for all instances of the class.
     """
+
     precom_suffix = "/precom"
     propose_suffix = "/propose"
     failure_suffix = "/failure"
@@ -39,6 +38,7 @@ class DelegationManager(object):
                 should be unique
         :param taking_tasks_possible: whether this is instance can actually
                 take tasks or just delegate them
+        :param cost_function_evaluator: an instance of a CostEvaluator
         """
 
         self._name = manager_name
@@ -63,18 +63,18 @@ class DelegationManager(object):
         Initiates needed subscribers and publishers
         """
 
-        self._cfp_publisher = rospy.Publisher(self.cfp_topic_name, CFP, queue_size=10)
-        self._cfp_subscriber = rospy.Subscriber(self.cfp_topic_name, CFP, self.__cfp_callback)
+        self._cfp_publisher = rospy.Publisher(name=self.cfp_topic_name, data_class=CFP, queue_size=10)
+        self._cfp_subscriber = rospy.Subscriber(name=self.cfp_topic_name, data_class=CFP, callback=self.__cfp_callback)
 
     def __init_services(self):
         """
         Initiates needed services
         """
 
-        self._precom_service = rospy.Service(self._name+self.precom_suffix, Precommit, self.__precom_callback)
-        self._propose_service = rospy.Service(self._name+self.propose_suffix, Propose, self.__propose_callback)
-        self._failure_service = rospy.Service(self._name+self.failure_suffix, Failure, self.__failure_callback)
-        self._terminate_service = rospy.Service(self._name+self.terminate_suffix, Terminate, self.__terminate_callback)
+        self._precom_service = rospy.Service(name=self._name+self.precom_suffix, service_class=Precommit, handler=self.__precom_callback)
+        self._propose_service = rospy.Service(name=self._name+self.propose_suffix, service_class=Propose, handler=self.__propose_callback)
+        self._failure_service = rospy.Service(name=self._name+self.failure_suffix, service_class=Failure, handler=self.__failure_callback)
+        self._terminate_service = rospy.Service(name=self._name+self.terminate_suffix, service_class=Terminate, handler=self.__terminate_callback)
 
     # ------ Deletion methods ------
 
@@ -139,7 +139,9 @@ class DelegationManager(object):
         :return: empty response
         """
 
-        self.__loginfo(str(request.name) + " is trying to terminate the task with his auction id " + str(request.auction_id))
+        auctioneer_name = request.name
+        auction_id = request.auction_id
+        self.__loginfo(str(auctioneer_name) + " is trying to terminate the task with his auction id " + str(auction_id))
 
         response = TerminateResponse()
 
@@ -147,8 +149,7 @@ class DelegationManager(object):
         if not self._got_task:
             self.__logwarn("Termination for a task, that i dont have")
             return response
-        if self.__running_task.get_auction_id() != request.auction_id \
-                or self.__running_task.get_auctioneer_name() != request.name:
+        if self.__running_task.get_auction_id() != auction_id or self.__running_task.get_auctioneer_name() != auctioneer_name:
             self.__logwarn("Termination for a task, that i dont have")
             return response
 
@@ -174,36 +175,37 @@ class DelegationManager(object):
                 sending a new bid
         """
 
-        self.__loginfo(str(request.name) + " sent a precommit for his auction " + str(request.auction_id))
+        auctioneer_name = request.name
+        auction_id = request.auction_id
+        goal_representation = request.goal_representation
 
+        self.__loginfo(str(auctioneer_name) + " sent a precommit for his auction " + str(auction_id))
+
+        # response with initial values, all negative
         response = PrecommitResponse()
+        response.acceptance = False
+        response.still_biding = False
+        response.new_proposal = 0
 
         if self._got_task or not self.__taking_tasks_possible:
             self.__loginfo("Taking a task is currently not possible")
-            response.acceptance = False
-            response.still_biding = False
-            response.new_proposal = 0
             return response
 
-        new_cost, possible_goal = self.__cost_function_evaluator(request.goal_representation)
+        new_cost, possible_goal = self.__cost_function_evaluator(goal_representation)
 
         if not possible_goal:
             self.__loginfo("Earlier proposal can not be verified, goal currently not possible")
-            response.acceptance = False
-            response.still_biding = False
-            response.new_proposal = 0
             return response
 
         if new_cost <= request.old_proposal:
-            self.__loginfo("Have accepted a contract from " + str(request.name))
+            self.__loginfo("Have accepted a contract from " + str(auctioneer_name))
             response.acceptance = True
-            new_task = Task(request.auction_id, request.name)
+            new_task = Task(auction_id=auction_id, auctioneer_name=auctioneer_name)
             self._got_task = True
             self.__running_task = new_task
 
         else:
             self.__loginfo("Earlier proposed cost is lower than new cost:" + str(request.old_proposal) + "<" + str(new_cost))
-            response.acceptance = False
 
         response.still_biding = True
         response.new_proposal = new_cost
@@ -219,19 +221,24 @@ class DelegationManager(object):
         :return: empty response
         """
 
-        self.__loginfo(str(request.name) + " proposed for my auction " + str(request.auction_id) + " with " + str(request.value))
+        bidder_name = request.name
+        auction_id = request.auction_id
+        proposed_value = request.value
+
+        self.__loginfo(str(bidder_name) + " proposed for my auction " + str(auction_id) + " with " + str(proposed_value))
 
         try:
-            delegation = self.get_delegation(request.auction_id)
+            delegation = self.get_delegation(auction_id=auction_id)
         except NameError:
             self.__logwarn("Proposal for not existing delegation")
             return ProposeResponse()
 
-        new_proposal = Proposal(request.name, request.value)
+        new_proposal = Proposal(name=bidder_name, value=proposed_value)
+
         try:
-            delegation.add_proposal(new_proposal)
+            delegation.add_proposal(proposal=new_proposal)
         except Warning:
-            self.__loginfo("Proposal from " + new_proposal.get_name() + " wont be added, he is forbidden")
+            self.__loginfo("Proposal from " + str(bidder_name) + " wont be added, he is forbidden")
 
         return ProposeResponse()
 
@@ -246,13 +253,16 @@ class DelegationManager(object):
         :return: empty response
         """
 
-        self.__loginfo(str(request.name) + " reported a FAILURE for my auction " + str(request.auction_id))
+        contractor_name = request.name
+        auction_id = request.auction_id
+
+        self.__loginfo(str(contractor_name) + " reported a FAILURE for my auction " + str(auction_id))
 
         response = FailureResponse()
         try:
-            delegation = self.get_delegation(request.auction_id)
+            delegation = self.get_delegation(auction_id=auction_id)
         except NameError:
-            self.__logwarn("Failure Message for not existing delegation")
+            self.__logwarn("Failure Message for nonexistent delegation")
             return response
 
         try:
@@ -261,11 +271,11 @@ class DelegationManager(object):
             self.__logwarn("Failure Message for delegation without contractor")
             return response
 
-        if delegation.get_contractor() != request.name:
+        if delegation.get_contractor() != contractor_name:
             self.__logwarn("Failure Message from source who is not its contractor")
             return response
 
-        delegation.forbid_bidder(request.name)
+        delegation.forbid_bidder(name=contractor_name)
         delegation.fail_current_delegation()
         self.__start_auction(delegation)
 
@@ -281,7 +291,11 @@ class DelegationManager(object):
         :param msg: message of the CFP.msg type
         """
 
-        self.__loginfo("Got CFP from " + str(msg.name) + " with ID " + str(msg.auction_id))
+        auctioneer_name = msg.name
+        auction_id = msg.auction_id
+        goal_representation = msg.goal_representation
+
+        self.__loginfo("Got CFP from " + str(auctioneer_name) + " with ID " + str(auction_id))
 
         # TODO should i bid this way for my OWN auctions?
 
@@ -294,12 +308,12 @@ class DelegationManager(object):
             self.__loginfo("Wont bid, because i already have a task")
             return
 
-        cost, possible_goal = self.__cost_function_evaluator(msg.goal_representation)
+        cost, possible_goal = self.__cost_function_evaluator(goal_representation)
 
         if possible_goal:
             self.__loginfo("Sending a proposal of " + str(cost))
             try:
-                self.__send_propose(cost, msg.name, msg.auction_id)
+                self.__send_propose(cost, auctioneer_name, auction_id)
             except rospy.ServiceException:
                 # Sending of a Proposal is not ultimately important
                 self.__logwarn("Sending of Proposal not working, continuing without")
@@ -476,7 +490,7 @@ class DelegationManager(object):
         # check that the auction_id is usable in ROS msgs/services
         uint32_max = 2**32 - 1
         if self.__auction_id > uint32_max:
-            self.__logwarn("Space for auction IDs is exhausted, starting with 0 again")
+            self.__logwarn("Space for auction IDs is exhausted, starting with 0 again. This could possibly lead to problems!")
             self.__auction_id = 0
 
         return self.__auction_id
@@ -494,10 +508,10 @@ class DelegationManager(object):
         :return: response of the call
         """
 
-        response = self.__send_precom(proposal.get_name(),
-                                      delegation.get_auction_id(),
-                                      proposal.get_value(),
-                                      delegation.get_goal_representation())
+        response = self.__send_precom(target_name=proposal.get_name(),
+                                      auction_id=delegation.get_auction_id(),
+                                      proposal_value=proposal.get_value(),
+                                      goal_represenation=delegation.get_goal_representation())
         return response
 
     def __start_auction(self, delegation):
@@ -513,9 +527,93 @@ class DelegationManager(object):
         delegation.reset_steps()
         delegation.state.set_waiting_for_proposal()
 
-        self.__loginfo("Starting auction with ID: " + str(delegation.get_auction_id()))
+        auction_id = delegation.get_auction_id()
+        goal_representation = delegation.get_goal_representation()
 
-        self.__send_cfp(delegation.get_goal_representation(), delegation.get_auction_id())
+        self.__loginfo("Starting auction with ID: " + str(auction_id))
+        self.__send_cfp(goal_representation=goal_representation, auction_id=auction_id)
+
+    def __end_auction(self, delegation):    # TODO myb clean this up a bit
+        """
+        Stops the auction for the given delegation, determines its winner and
+        tries to make him the contractor
+
+        :param delegation: the delegation of which the auction should end
+        :return: TODO to be determined, if any
+        """
+
+        auction_id = delegation.get_auction_id()
+        self.__loginfo("Trying to end Auction with ID " + str(auction_id))
+
+        up_for_delegation = True
+
+        while delegation.has_proposals() and up_for_delegation:
+
+            try:
+                best_proposal = delegation.get_best_proposal()
+            except NameError:
+                self.__logwarn("Delegation with auction id " + str(auction_id) + " has no proposals")
+                break
+
+            bidder_name = best_proposal.get_name()
+            proposed_value = best_proposal.get_value()
+
+            self.__loginfo("Sending a precommit to " + str(bidder_name) + " who bid " + str(
+                proposed_value) + " for my auction " + str(
+                auction_id))
+
+            try:
+                response = self.__precom(proposal=best_proposal, delegation=delegation)
+            except rospy.ServiceException:
+                # if the best bid is not reachable, try next best bid, instead of giving up auction
+                self.__logwarn("Precommit failed, trying next best Bidder if applicable")
+                delegation.remove_proposal(proposal=best_proposal)
+                continue
+
+            if response.acceptance:
+                self.__loginfo(str(bidder_name) + " has accepted the contract for a cost of " + str(
+                    proposed_value) + " for my auction " + str(
+                    auction_id))
+
+                try:
+                    # set contractor and change delegation state
+                    delegation.set_contractor(name=bidder_name)
+                except NameError:
+                    self.__logwarn("Contractor has already been chosen, while i am trying to find one")
+                    up_for_delegation = False
+                    break
+
+                # actually send the goal to the bidder
+                try:
+                    delegation.send_goal(name=bidder_name)
+                except Exception as e:  # TODO really to broad?
+                    self.__logwarn("Sending goal was not possible!")
+                    # TODO make sure this works right at the side of the bidder
+                    delegation.remove_proposal(proposal=best_proposal)
+                    continue
+
+                # Contractor has been found
+                up_for_delegation = False
+
+            elif response.still_biding:
+                self.__loginfo(str(bidder_name) + " has given a new proposal of " + str(response.new_proposal) + " for my auction " + str(
+                    auction_id))
+                delegation.remove_proposal(proposal=best_proposal)
+                try:
+                    delegation.add_proposal(proposal=Proposal(bidder_name, response.new_proposal))
+                except Warning:
+                    self.__loginfo("Proposal from " + bidder_name + " wont be added, he is forbidden")
+
+            else:
+                self.__loginfo(str(bidder_name) + " has stopped biding for my auction " + str(auction_id))
+                delegation.remove_proposal(proposal=best_proposal)
+
+        if up_for_delegation:
+            self.__logwarn("No possible contractor has been found for my auction " + str(auction_id))
+
+            # TODO Right handling, possible: send new CFP, give up or myb depending on needed delegation or just possible delegation
+
+    # ------ Functions to interact with the DelegationManager ------
 
     def terminate(self, delegation):
         """
@@ -528,9 +626,11 @@ class DelegationManager(object):
         :param delegation: the delegation that should be terminated
         """
 
-        self.__loginfo("Terminating contract with " + str(delegation.get_contractor()) + " in my auction " + str(delegation.get_auction_id()))
+        contractor = delegation.get_contractor()
+        auction_id = delegation.get_auction_id()
 
-        self.__send_terminate(delegation.get_contractor(), delegation.get_auction_id())
+        self.__loginfo("Terminating contract with " + str(contractor) + " in my auction " + str(auction_id))
+        self.__send_terminate(target_name=contractor, auction_id=auction_id)
 
         delegation.state.set_finished()
 
@@ -541,27 +641,27 @@ class DelegationManager(object):
         Wrapper for the call
         """
 
-        self.__send_failure(self.__running_task.get_auctioneer_name(), self.__running_task.get_auction_id())
+        self.__send_failure(auctioneer_name=self.__running_task.get_auctioneer_name(), auction_id=self.__running_task.get_auction_id())
 
         # TODO possibly handle at a higher level
         self._got_task = False
         self.__running_task = None
 
-    def delegate(self, goal, auction_steps=3):       # TODO subject to change, parameter?
+    def delegate(self, goal_wrapper, auction_steps=3):
         """
         Makes a delegation for the goal and starts an auction for this
         delegation
 
         :param auction_steps: number of steps
                 that are waited for proposals while the auction is running
-        :param goal: the goal that should be delegated   TODO stc
+        :param goal_wrapper: wrapper for the goal that should be delegated
         :return: the auction_id of the auction
         """
 
-        new = Delegation(goal, self.get_new_auction_id(), auction_steps)
+        new = Delegation(goal_wrapper=goal_wrapper, auction_id=self.get_new_auction_id(), auction_steps=auction_steps)
 
         self.__delegations.append(new)
-        self.__start_auction(new)
+        self.__start_auction(delegation=new)
 
         return new.get_auction_id()
 
@@ -578,84 +678,18 @@ class DelegationManager(object):
         waiting_delegations = [d for d in self.__delegations if d.state.is_waiting_for_proposals()]
 
         for delegation in waiting_delegations:
-
+            # decrementing the needed steps and checking at the same time
             if delegation.decrement_and_check_steps():
-                self.__end_auction(delegation)
-
-    def __end_auction(self, delegation):
-        """
-        Stops the auction for the given delegation, determines its winner and
-        tries to make him the contractor
-
-        :param delegation: the delegation of which the auction should end
-        :return: TODO to be determined, if any
-        """
-
-        self.__loginfo("Trying to end Auction with ID " + str(delegation.get_auction_id()))
-
-        up_for_delegation = True
-
-        while delegation.has_proposals() and up_for_delegation:
-
-            try:
-                best_proposal = delegation.get_best_proposal()
-            except NameError:
-                self.__logwarn("Delegation with auction id " + str(delegation.get_auction_id()) + " has no proposals")
-                break
-
-            self.__loginfo("Sending a precommit to " + str(best_proposal.get_name()) + " who bid " + str(best_proposal.get_value()) + " for my auction " + str(delegation.get_auction_id()))
-
-            try:
-                response = self.__precom(best_proposal, delegation)
-            except rospy.ServiceException:
-                # if the best bid is not reachable, try next best bid, instead of giving up auction
-                self.__logwarn("Precommit failed, trying next best Bidder if applicable")
-                delegation.remove_proposal(best_proposal)
-                continue
-
-            if response.acceptance:
-
-                self.__loginfo(str(best_proposal.get_name()) + " has accepted the contract for a cost of " + str(best_proposal.get_value()) + " for my auction " + str(delegation.get_auction_id()))
-
-                try:
-                    # set contractor and change delegation state
-                    delegation.set_contractor(best_proposal.get_name())
-                except NameError:
-                    self.__logwarn("Contractor has already been chosen, while i am trying to find one")
-                    up_for_delegation = False
-                    break
-
-                # TODO send goal to contractor via funtioncall or creating a proper online goal with the right manager_prefix
-
-                # Contractor has been found
-                up_for_delegation = False
-
-            elif response.still_biding:
-
-                self.__loginfo(str(best_proposal.get_name()) + " has given a new proposal of " + str(response.new_proposal) + " for my auction " + str(delegation.get_auction_id()))
-                delegation.remove_proposal(best_proposal)
-                try:
-                    delegation.add_proposal(Proposal(best_proposal.get_name(), response.new_proposal))
-                except Warning:
-                    self.__loginfo("Proposal from " + best_proposal.get_name() + " wont be added, he is forbidden")
-
-            else:
-
-                self.__loginfo(str(best_proposal.get_name()) + " has stopped biding for my auction " + str(delegation.get_auction_id()))
-                delegation.remove_proposal(best_proposal)
-
-        if up_for_delegation:
-            self.__logwarn("No possible contractor has been found for my auction " + str(delegation.get_auction_id()))
-
-            # TODO Right handling, possible: send new CFP, give up or myb depending on needed delegation or just possible delegation
+                self.__end_auction(delegation=delegation)
 
 
 class DelegationManagerSingleton(object):
+
     __instance = None
 
     def __init__(self, manager_name="", taking_tasks_possible=False, cost_function_evaluator=None):
         if self.__instance is None:
-            __instance = DelegationManager(manager_name=manager_name, taking_tasks_possible=taking_tasks_possible, cost_function_evaluator=cost_function_evaluator)
+            self.__instance = DelegationManager(manager_name=manager_name, taking_tasks_possible=taking_tasks_possible, cost_function_evaluator=cost_function_evaluator)
         else:
             # TODO myb change DelegationManager if formerly taking_tasks was false and this one is true
             pass

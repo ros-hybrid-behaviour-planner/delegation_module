@@ -5,7 +5,6 @@ import rospy
 import rostest
 
 from behaviour_components.managers import Manager
-from behaviour_components.goals import OfflineGoal
 from delegation_components.cost_computing import PDDLCostEvaluator
 from delegation_components.basic_sceanrio import BasicCookingRobot
 
