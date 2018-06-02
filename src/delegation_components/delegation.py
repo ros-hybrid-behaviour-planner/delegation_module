@@ -205,7 +205,7 @@ class Delegation(object):
     def send_goal(self, name):
 
         self.__goal_wrapper.send_goal(name=name)
-        # TODO myb catch exceptions
+        # TODO myb catch exceptions / if they are specified
 
 
 class Proposal(object):

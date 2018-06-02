@@ -108,5 +108,5 @@ class RHBPGoalWrapper(GoalWrapperBase):
 
         self.__goal = GoalBase(name=self.__name, plannerPrefix=name, conditions=self.__conditions, satisfaction_threshold=self.__satisfaction_threshold)
         self.__created_goal = True
-        # TODO raise exception if it doesnt work
+        # TODO raise exception if it doesnt work (first find out if it worked...)
 

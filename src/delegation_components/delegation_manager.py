@@ -6,6 +6,7 @@ from task_decomposition_module.msg import CFP
 from task_decomposition_module.srv import Precommit, PrecommitResponse, \
     Propose, ProposeResponse, Failure, FailureResponse, Terminate, \
     TerminateResponse
+from delegation_errors import DelegationServiceError, DelegationPlanningWarning
 from delegation import Delegation, Proposal
 from task import Task
 
@@ -155,7 +156,7 @@ class DelegationManager(object):
 
         self.__loginfo("Stopping currently running task")
 
-        # TODO kill corresponding goal from manager
+        # TODO kill corresponding goal from manager ( how to do this? )
 
         self._got_task = False
         self.__running_task = None
@@ -191,7 +192,11 @@ class DelegationManager(object):
             self.__loginfo("Taking a task is currently not possible")
             return response
 
-        new_cost, possible_goal = self.__cost_function_evaluator(goal_representation)
+        try:
+            new_cost, possible_goal = self.__cost_function_evaluator(goal_representation)
+        except DelegationPlanningWarning as e:
+            self.__loginfo("Goal not possible. PlannerMessage: " + str(e.message))
+            new_cost, possible_goal = -1, False
 
         if not possible_goal:
             self.__loginfo("Earlier proposal can not be verified, goal currently not possible")
@@ -308,71 +313,77 @@ class DelegationManager(object):
             self.__loginfo("Wont bid, because i already have a task")
             return
 
-        cost, possible_goal = self.__cost_function_evaluator(goal_representation)
+        try:
+            cost, possible_goal = self.__cost_function_evaluator(goal_representation)
+        except DelegationPlanningWarning as e:
+            self.__loginfo("Goal not possible. PlannerMessage: " + str(e.message))
+            cost, possible_goal = -1, False
 
         if possible_goal:
             self.__loginfo("Sending a proposal of " + str(cost))
             try:
                 self.__send_propose(cost, auctioneer_name, auction_id)
-            except rospy.ServiceException:
+            except DelegationServiceError as e:
                 # Sending of a Proposal is not ultimately important
-                self.__logwarn("Sending of Proposal not working, continuing without")
+                self.__logwarn("Sending of Proposal not working, continuing without (error_message:\"" + str(e.message) + "\")")
 
     # ------ Message sending methods ------
 
     def __send_propose(self, value, target_name, auction_id):
         """
-        Sends a Propose service call
+        Sends a Propose service_name call
 
         :param value: proposed cost
         :param target_name: name of the auctioneer
         :param auction_id: ID of the auction
-        :raises ServiceException: if call failed
+        :raises DelegationServiceError: if call failed
         """
 
         self.__loginfo("Sending a proposal to " + str(target_name) + " for his auction " + str(auction_id))
 
+        service_name = target_name + self.propose_suffix
         try:
-            rospy.wait_for_service(target_name + self.propose_suffix)
+            rospy.wait_for_service(service_name)
         except rospy.ROSException:
-            self.__logwarn("Waiting to long for service: " + str(target_name + self.propose_suffix))
-            raise rospy.ServiceException()
+            self.__logwarn("Waiting to long for service: " + str(service_name))
+            raise DelegationServiceError("Waiting to long: " + str(service_name))
 
         try:
             send_proposal = rospy.ServiceProxy(
-                target_name + self.propose_suffix, Propose)
+                service_name, Propose)
             send_proposal(self._name, auction_id, value)
         except rospy.ServiceException:
             self.__logwarn("Propose call failed")
-            raise
+            raise DelegationServiceError("Call failed: " + str(service_name))
 
-    def __send_precom(self, target_name, auction_id, proposal_value, goal_represenation):
+    def __send_precom(self, target_name, auction_id, proposal_value, goal_representation):
         """
         Calls the Precommit service of the winning bidder of this delegation
 
         :param target_name: name of the bidder who gets the precom
         :param auction_id: ID of the corresponding auction
         :param proposal_value: proposed value
-        :param goal_represenation: represenation of the goal for this auction
+        :param goal_representation: representation of the goal for this auction
         :return: response of the service call,
                 includes the acceptance of the bidder or possibly a new proposal
-        :raises ServiceException: if call failed
+        :raises DelegationServiceError: if call failed
         """
 
         self.__loginfo("Sending a precommit to " + str(target_name) + " for my auction " + str(auction_id))
 
+        service_name = target_name + self.precom_suffix
         try:
-            rospy.wait_for_service(target_name + self.precom_suffix)
+            rospy.wait_for_service(service_name)
         except rospy.ROSException:
-            self.__logwarn("Waiting to long for service: " + str(target_name + self.precom_suffix))
-            raise rospy.ServiceException()
+            self.__logwarn("Waiting to long for service: " + str(service_name))
+            raise DelegationServiceError("Waiting to long: " + str(service_name))
 
         try:
-            send_precom = rospy.ServiceProxy(target_name + self.precom_suffix, Precommit)
-            response = send_precom(goal_represenation, self._name, auction_id, proposal_value)
+            send_precom = rospy.ServiceProxy(service_name, Precommit)
+            response = send_precom(goal_representation, self._name, auction_id, proposal_value)
         except rospy.ServiceException:
             self.__logwarn("Precommit call failed")
-            raise
+            raise DelegationServiceError("Call failed: " + str(service_name))
 
         return response
 
@@ -383,23 +394,24 @@ class DelegationManager(object):
 
         :param target_name: name of the target of the call
         :param auction_id: ID of the auction for this termination
-        :raises ServiceException: if call failed
+        :raises DelegationServiceError: if call failed
         """
 
         self.__loginfo("Sending a terminate to " + str(target_name) + " for my auction " + str(auction_id))
 
+        service_name = target_name + self.terminate_suffix
         try:
-            rospy.wait_for_service(target_name + self.terminate_suffix)
+            rospy.wait_for_service(service_name)
         except rospy.ROSException:
-            self.__logwarn("Waiting to long for service: " + str(target_name + self.terminate_suffix))
-            raise rospy.ServiceException()
+            self.__logwarn("Waiting to long for service: " + str(service_name))
+            raise DelegationServiceError("Waiting to long: " + str(service_name))
 
         try:
-            send_terminate = rospy.ServiceProxy(target_name + self.terminate_suffix, Terminate)
+            send_terminate = rospy.ServiceProxy(service_name, Terminate)
             send_terminate(auction_id, self._name)
         except rospy.ServiceException:
             self.__logwarn("Terminate call failed")
-            raise
+            raise DelegationServiceError("Call failed: " + str(service_name))
 
     def __send_failure(self, auctioneer_name, auction_id):
         """
@@ -412,18 +424,19 @@ class DelegationManager(object):
 
         self.__loginfo("Sending a Failure message to " + str(auctioneer_name) + " for his auction " + str(auction_id))
 
+        service_name = auctioneer_name + self.failure_suffix
         try:
-            rospy.wait_for_service(auctioneer_name + self.failure_suffix)
+            rospy.wait_for_service(service_name)
         except rospy.ROSException:
-            self.__logwarn("Waiting to long for service: " + str(auctioneer_name + self.failure_suffix))
-            raise rospy.ServiceException()
+            self.__logwarn("Waiting to long for service: " + str(service_name))
+            raise DelegationServiceError("Waiting to long: " + str(service_name))
 
         try:
-            send_failure = rospy.ServiceProxy(auctioneer_name + self.failure_suffix, Failure)
+            send_failure = rospy.ServiceProxy(service_name, Failure)
             send_failure(self._name, auction_id)
         except rospy.ServiceException:
             self.__logwarn("Failure call failed")
-            raise
+            raise DelegationServiceError("Call failed: " + str(service_name))
 
     def __send_cfp(self, goal_representation, auction_id):
         """
@@ -445,7 +458,7 @@ class DelegationManager(object):
             self._cfp_publisher.publish(msg)
         except rospy.ROSException:
             self.__logwarn("CFP publish failed")
-            raise rospy.ServiceException()
+            raise DelegationServiceError("Call failed: CFP")
 
     # ------ Simple Getter/Setter for members ------
 
@@ -511,7 +524,7 @@ class DelegationManager(object):
         response = self.__send_precom(target_name=proposal.get_name(),
                                       auction_id=delegation.get_auction_id(),
                                       proposal_value=proposal.get_value(),
-                                      goal_represenation=delegation.get_goal_representation())
+                                      goal_representation=delegation.get_goal_representation())
         return response
 
     def __start_auction(self, delegation):
@@ -531,7 +544,11 @@ class DelegationManager(object):
         goal_representation = delegation.get_goal_representation()
 
         self.__loginfo("Starting auction with ID: " + str(auction_id))
-        self.__send_cfp(goal_representation=goal_representation, auction_id=auction_id)
+        try:
+            self.__send_cfp(goal_representation=goal_representation, auction_id=auction_id)
+        except DelegationServiceError as e:
+            self.__logwarn("CFP was not sent right (error_message:\"" + str(e.message) + "\")")
+            # TODO what to do now?
 
     def __end_auction(self, delegation):    # TODO myb clean this up a bit
         """
@@ -564,9 +581,9 @@ class DelegationManager(object):
 
             try:
                 response = self.__precom(proposal=best_proposal, delegation=delegation)
-            except rospy.ServiceException:
+            except DelegationServiceError as e:
                 # if the best bid is not reachable, try next best bid, instead of giving up auction
-                self.__logwarn("Precommit failed, trying next best Bidder if applicable")
+                self.__logwarn("Precommit failed, trying next best Bidder if applicable (error_message:\"" + str(e.message) + "\")")
                 delegation.remove_proposal(proposal=best_proposal)
                 continue
 
@@ -586,9 +603,9 @@ class DelegationManager(object):
                 # actually send the goal to the bidder
                 try:
                     delegation.send_goal(name=bidder_name)
-                except Exception as e:  # TODO really to broad?
+                except Exception as e:  # TODO really to broad / specify this exception when its chosen
                     self.__logwarn("Sending goal was not possible!")
-                    # TODO make sure this works right at the side of the bidder
+                    # TODO make sure this works right at the side of the bidder (myb send terminate)
                     delegation.remove_proposal(proposal=best_proposal)
                     continue
 
@@ -630,7 +647,7 @@ class DelegationManager(object):
         auction_id = delegation.get_auction_id()
 
         self.__loginfo("Terminating contract with " + str(contractor) + " in my auction " + str(auction_id))
-        self.__send_terminate(target_name=contractor, auction_id=auction_id)
+        self.__send_terminate(target_name=contractor, auction_id=auction_id)    # TODO catch exception/make sure termination is done right
 
         delegation.state.set_finished()
 
@@ -641,6 +658,7 @@ class DelegationManager(object):
         Wrapper for the call
         """
 
+        # TODO catch exception/make sure failure is done right
         self.__send_failure(auctioneer_name=self.__running_task.get_auctioneer_name(), auction_id=self.__running_task.get_auction_id())
 
         # TODO possibly handle at a higher level

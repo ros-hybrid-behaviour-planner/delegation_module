@@ -1,4 +1,6 @@
 
+from delegation_errors import DelegationPlanningWarning
+
 
 class AbstractCostEvaluator(object):
     """
@@ -68,8 +70,9 @@ class PDDLCostEvaluator(AbstractCostEvaluator):
         This is accomplished by trying to plan with the PDDL-planing-function
         and using this plan to extract cost/possibility
 
-        :param goal_representation:
-        :return:
+        :param goal_representation: PDDL representation of the goal (goal-statement)
+        :return: Cost, Possibility for this goal
+        :raises DelegationPlanningWarning: if planning failed
         """
 
         possible = False
@@ -79,9 +82,8 @@ class PDDLCostEvaluator(AbstractCostEvaluator):
             if plan and "cost" in plan and plan["cost"] != -1.0:
                 possible = True
                 cost = self.__compute_cost(plan=plan)
-        except Exception as e:
-            # TODO myb raise exception to pass information about planning
-            pass
+        except Exception as e:  # catch any exception
+            raise DelegationPlanningWarning(str(e.message))
 
         return cost, possible
 

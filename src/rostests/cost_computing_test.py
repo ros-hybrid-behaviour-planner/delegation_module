@@ -6,7 +6,7 @@ import rostest
 
 from behaviour_components.managers import Manager
 from delegation_components.cost_computing import PDDLCostEvaluator
-from delegation_components.basic_sceanrio import BasicCookingRobot
+from rostests.basic_sceanrio import BasicCookingRobot
 
 PKG = "task_decomposition_module"
 
