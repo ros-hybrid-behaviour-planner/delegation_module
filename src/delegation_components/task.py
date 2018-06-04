@@ -34,4 +34,3 @@ class Task(object):
         """
 
         return self.__auctioneer_name
-

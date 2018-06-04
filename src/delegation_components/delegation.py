@@ -1,5 +1,6 @@
 
 import bisect
+from delegation_errors import DelegationContractorError
 
 
 class Delegation(object):
@@ -44,8 +45,9 @@ class Delegation(object):
         :raises Warning: if bidder of this proposal is forbidden
         """
 
-        if self.__forbidden_bidders.__contains__(proposal.get_name()):
-            raise Warning("Proposal wont be added, bidder is forbidden")
+        name = proposal.get_name()
+        if self.__forbidden_bidders.__contains__(name):
+            raise Warning("Proposal wont be added, bidder " + str(name) + " is forbidden")
 
         bisect.insort(a=self.__proposals, x=proposal)
 
@@ -92,8 +94,7 @@ class Delegation(object):
         :return: the representation of the goal
         """
 
-        goal_representation = self.__goal_wrapper.get_goal_representation()
-        return goal_representation
+        return self.__goal_wrapper.get_goal_representation()
 
     def get_best_proposal(self):
         """
@@ -104,7 +105,7 @@ class Delegation(object):
         """
 
         if not self.has_proposals():
-            raise NameError("Got no proposals")
+            raise LookupError("Got no proposals")
 
         return self.__proposals[0]
 
@@ -173,7 +174,7 @@ class Delegation(object):
         """
 
         if self.__got_contractor:
-            raise NameError("Contractor already chosen")
+            raise DelegationContractorError("Contractor already chosen")
 
         self.__contractor = name
         self.__got_contractor = True
@@ -188,7 +189,7 @@ class Delegation(object):
         """
 
         if not self.__got_contractor:
-            raise NameError("No contractor chosen")
+            raise DelegationContractorError("No contractor chosen")
 
         return self.__contractor
 

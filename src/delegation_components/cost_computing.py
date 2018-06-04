@@ -98,10 +98,6 @@ class PDDLCostEvaluator(AbstractCostEvaluator):
 
         steps = plan["cost"]
 
-        print("Plan:")
-        print(plan)
-
         # TODO create smart heuristic for cost based on steps and possible other stuff
 
         return steps
-

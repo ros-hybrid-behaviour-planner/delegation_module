@@ -6,7 +6,7 @@ from task_decomposition_module.msg import CFP
 from task_decomposition_module.srv import Precommit, PrecommitResponse, \
     Propose, ProposeResponse, Failure, FailureResponse, Terminate, \
     TerminateResponse
-from delegation_errors import DelegationServiceError, DelegationPlanningWarning
+from delegation_errors import DelegationServiceError, DelegationPlanningWarning, DelegationContractorError
 from delegation import Delegation, Proposal
 from task import Task
 
@@ -20,7 +20,8 @@ class DelegationManager(object):
     delegated, to making sure a delegated task is accomplished.
 
     The class contains the suffixes for services and the name of the CFP-topic.
-    These have to be the same for all instances of the class.
+    These have to be the same for all instances of the class
+    (in different processes and machines).
     """
 
     precom_suffix = "/precom"
@@ -150,6 +151,7 @@ class DelegationManager(object):
         if not self._got_task:
             self.__logwarn("Termination for a task, that i dont have")
             return response
+        # and the sender of the call is the one who gave me this task
         if self.__running_task.get_auction_id() != auction_id or self.__running_task.get_auctioneer_name() != auctioneer_name:
             self.__logwarn("Termination for a task, that i dont have")
             return response
@@ -272,7 +274,7 @@ class DelegationManager(object):
 
         try:
             delegation.get_contractor()
-        except NameError:
+        except DelegationContractorError:
             self.__logwarn("Failure Message for delegation without contractor")
             return response
 
@@ -568,7 +570,7 @@ class DelegationManager(object):
 
             try:
                 best_proposal = delegation.get_best_proposal()
-            except NameError:
+            except LookupError:
                 self.__logwarn("Delegation with auction id " + str(auction_id) + " has no proposals")
                 break
 
@@ -595,7 +597,7 @@ class DelegationManager(object):
                 try:
                     # set contractor and change delegation state
                     delegation.set_contractor(name=bidder_name)
-                except NameError:
+                except DelegationContractorError:
                     self.__logwarn("Contractor has already been chosen, while i am trying to find one")
                     up_for_delegation = False
                     break
@@ -702,21 +704,50 @@ class DelegationManager(object):
 
 
 class DelegationManagerSingleton(object):
+    """
+    Class that is a singleton container for the DelegationManager
+
+    Initiate this class and use get_instance() and use that instance as a normal
+    instance of the DelegationManager
+    """
 
     __instance = None
 
     def __init__(self, manager_name="", taking_tasks_possible=False, cost_function_evaluator=None):
-        if self.__instance is None:
-            self.__instance = DelegationManager(manager_name=manager_name, taking_tasks_possible=taking_tasks_possible, cost_function_evaluator=cost_function_evaluator)
+        """
+        Constructor of the DelegationManagerSingleton
+
+        Constructs a new instance of the DelegationManager if no instance has
+        been created in this process
+
+        This should be used first in the manager of process with the managers
+        name, if a manager is used in this process/node
+
+        :param manager_name: name of instance the DelegationManager, should be
+                unique and the name of the normal manager if this
+                DelegationManager can take tasks
+        :param taking_tasks_possible: whether this is instance can actually
+                take tasks or just delegate them
+        :param cost_function_evaluator: an instance of a CostEvaluator
+        """
+
+        if DelegationManagerSingleton.__instance is None:
+            DelegationManagerSingleton.__instance = DelegationManager(manager_name=manager_name, taking_tasks_possible=taking_tasks_possible, cost_function_evaluator=cost_function_evaluator)
         else:
             # TODO myb change DelegationManager if formerly taking_tasks was false and this one is true
-            pass
+            rospy.loginfo("There is already an instance of the DelegationManager in this process")
 
     def get_instance(self):
-        if self.__instance is None:
-            pass
-            # TODO raise right exception
-        return self.__instance
+        """
+        Returns the instance of the DelegationManager if apparent
+
+        :return: the instance of the DelegationManager class
+        :raises RuntimeError: if no instance has been found
+        """
+
+        if DelegationManagerSingleton.__instance is None:
+            raise RuntimeError("No instance has been found")
+        return DelegationManagerSingleton.__instance
 
 
 if __name__ == '__main__':
