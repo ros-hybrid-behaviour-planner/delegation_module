@@ -236,7 +236,7 @@ class DelegationManager(object):
 
         try:
             delegation = self.get_delegation(auction_id=auction_id)
-        except NameError:
+        except LookupError:
             self.__logwarn("Proposal for not existing delegation")
             return ProposeResponse()
 
@@ -268,7 +268,7 @@ class DelegationManager(object):
         response = FailureResponse()
         try:
             delegation = self.get_delegation(auction_id=auction_id)
-        except NameError:
+        except LookupError:
             self.__logwarn("Failure Message for nonexistent delegation")
             return response
 
@@ -471,7 +471,7 @@ class DelegationManager(object):
 
         :param auction_id: auction_id of an existing delegation
         :return: the relevant delegation
-        :raises NameError: if there is no delegation with this auction_id
+        :raises LookupError: if there is no delegation with this auction_id
         """
 
         for delegation in self.__delegations:
@@ -479,19 +479,20 @@ class DelegationManager(object):
                 return delegation
 
         # if no delegation with this name exists
-        raise NameError("No delegation with the auction_id " + str(auction_id))
+        raise LookupError("No delegation with the auction_id " + str(auction_id))
 
     def get_task(self):     # TODO possibly more than one running task
         """
         Returns the currently running task
 
         :return: the running task
+        :raises LookupError: if there is no task
         """
 
         if self._got_task:
             return self.__running_task
         else:
-            raise NameError("Got no task currently")
+            raise LookupError("Got no task currently")
 
     def get_new_auction_id(self):
         """
@@ -606,7 +607,7 @@ class DelegationManager(object):
                 try:
                     delegation.send_goal(name=bidder_name)
                 except Exception as e:  # TODO really to broad / specify this exception when its chosen
-                    self.__logwarn("Sending goal was not possible!")
+                    self.__logwarn("Sending goal was not possible! (error_message:\"" + str(e.message) + "\")")
                     # TODO make sure this works right at the side of the bidder (myb send terminate)
                     delegation.remove_proposal(proposal=best_proposal)
                     continue
@@ -672,6 +673,10 @@ class DelegationManager(object):
         Makes a delegation for the goal and starts an auction for this
         delegation
 
+        The auction will be closed after the given number of steps were taken,
+        a winner will be determined and the goal will be delegated to that
+        winner.
+
         :param auction_steps: number of steps
                 that are waited for proposals while the auction is running
         :param goal_wrapper: wrapper for the goal that should be delegated
@@ -690,7 +695,6 @@ class DelegationManager(object):
         Does a step, meaning all delegations that are currently waiting
         for proposals are checked if their auction should end and those
         auctions are terminated
-
         """
 
         self.__loginfo("Doing a step")

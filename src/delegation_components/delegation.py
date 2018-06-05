@@ -17,6 +17,7 @@ class Delegation(object):
         :param goal_wrapper: goal that should be delegated
         :param auction_id: ID of the delegation/auction
         """
+
         self.__goal_wrapper = goal_wrapper
         self.__auction_id = auction_id
         self.__auction_steps_max = auction_steps
@@ -47,7 +48,8 @@ class Delegation(object):
 
         name = proposal.get_name()
         if self.__forbidden_bidders.__contains__(name):
-            raise Warning("Proposal wont be added, bidder " + str(name) + " is forbidden")
+            raise Warning("Proposal wont be added, bidder " + str(name) +
+                          " is forbidden")
 
         bisect.insort(a=self.__proposals, x=proposal)
 
@@ -58,6 +60,7 @@ class Delegation(object):
 
         :param proposal: The Proposal that should be removed
         """
+
         self.__proposals.remove(proposal)
 
     def get_auction_id(self):
@@ -71,7 +74,8 @@ class Delegation(object):
 
     def decrement_and_check_steps(self):
         """
-        Decrements current auction_steps and checks if the all steps are finished
+        Decrements current auction_steps and checks if the all steps are
+        finished
 
         :return: Whether the auction has waited all steps or not
         """
@@ -101,7 +105,7 @@ class Delegation(object):
         Returns the currently best proposal of this delegation
 
         :return: best proposal
-        :raises if got no proposals
+        :raises LookupError: if got no proposals
         """
 
         if not self.has_proposals():
@@ -170,7 +174,7 @@ class Delegation(object):
         changes state of this delegation to delegated
 
         :param name: name of the contractor
-        :raises NameError: if contractor already chosen
+        :raises DelegationContractorError: if contractor already chosen
         """
 
         if self.__got_contractor:
@@ -185,7 +189,7 @@ class Delegation(object):
         Gets the name of the contractor of this delegation
 
         :return: name of the contractor
-        :raises NameError: if no contractor is already chosen
+        :raises DelegationContractorError: if no contractor is already chosen
         """
 
         if not self.__got_contractor:
@@ -204,6 +208,12 @@ class Delegation(object):
         self.state.set_waiting_for_proposal()
 
     def send_goal(self, name):
+        """
+        Sends goal to manager with that name
+
+        :param name: name of the manager (particular usage depends on system,
+                for rhbp use planner_prefix of the manager)
+        """
 
         self.__goal_wrapper.send_goal(name=name)
         # TODO myb catch exceptions / if they are specified
@@ -230,6 +240,7 @@ class Proposal(object):
         """
         Comparator for proposals
         """
+
         return cmp(self.get_value(), other.get_value())
 
     def __repr__(self):
@@ -238,6 +249,7 @@ class Proposal(object):
 
         :return: string that represents the proposal
         """
+
         return "("+str(self.__name)+", "+str(self.__value)+")"
 
     def get_value(self):
@@ -271,6 +283,7 @@ class DelegationState(object):
         Constructor of the DelegationState,
         starts always in READY
         """
+
         self.__state_id = 0
 
     def __repr__(self):
@@ -279,6 +292,7 @@ class DelegationState(object):
 
         :return: string, that represents the state
         """
+
         if self.__state_id == 0:
             return "READY"
         elif self.__state_id == 1:

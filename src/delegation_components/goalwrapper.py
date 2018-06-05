@@ -14,6 +14,7 @@ class GoalWrapperBase(object):
 
         :param name: name of the goal
         """
+
         self.__name = name
         self.__created_goal = False
         self.__goal = None

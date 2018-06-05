@@ -12,6 +12,7 @@ class Task(object):
         :param auction_id: ID of the corresponding auction
         :param auctioneer_name: name of the auctioneer (my employer)
         """
+
         # TODO myb a reference to the corresponding goal
 
         self.__auction_id = auction_id

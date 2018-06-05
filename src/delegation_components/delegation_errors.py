@@ -15,6 +15,7 @@ class DelegationPlanningWarning(Warning):
     """
     pass
 
+
 class DelegationContractorError(Exception):
     """
     Error that shows that there is a problem with getting/setting the
