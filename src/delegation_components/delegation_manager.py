@@ -32,12 +32,14 @@ class DelegationManager(object):
 
     # ------ Initiation methods ------
 
-    def __init__(self, manager_name="", taking_tasks_possible=False, cost_function_evaluator=None):
+    def __init__(self, manager_name="", max_tasks=0, taking_tasks_possible=False, cost_function_evaluator=None):
         """
         Constructor for the DelegationManager
 
         :param manager_name: name of this instance of the DelegationManager,
                 should be unique
+        :param max_tasks: number of maximum tasks that can simultaneously run,
+                set this to 0 for no possible tasks
         :param taking_tasks_possible: whether this is instance can actually
                 take tasks or just delegate them
         :param cost_function_evaluator: an instance of a CostEvaluator
@@ -48,12 +50,12 @@ class DelegationManager(object):
         self.__delegations = []
         self.__auction_id = 0
 
+        self.__max_tasks = max_tasks
         self.__taking_tasks_possible = taking_tasks_possible
         if taking_tasks_possible and cost_function_evaluator is None:
             rospy.logerr("Initiating a DelegationManager, that has to be able to take tasks without a cost-function!")
         self.__cost_function_evaluator = cost_function_evaluator
-        self._got_task = False      # TODO myb more than one at the same time
-        self.__running_task = None
+        self.__tasks = []
 
         self.__init_topics()
         self.__init_services()
@@ -131,7 +133,7 @@ class DelegationManager(object):
 
     # ------ Callback functions ------
 
-    def __terminate_callback(self, request):
+    def __terminate_callback(self, request):    # TODO myb not usefull anymore, outdated
         """
         Callback for terminate service calls
 
@@ -148,11 +150,11 @@ class DelegationManager(object):
         response = TerminateResponse()
 
         # check if the terminated task is really running
-        if not self._got_task:
+        if not True:
             self.__logwarn("Termination for a task, that i dont have")
             return response
         # and the sender of the call is the one who gave me this task
-        if self.__running_task.get_auction_id() != auction_id or self.__running_task.get_auctioneer_name() != auctioneer_name:
+        if self.__tasks.get_auction_id() != auction_id or self.__tasks.get_auctioneer_name() != auctioneer_name:
             self.__logwarn("Termination for a task, that i dont have")
             return response
 
@@ -161,7 +163,7 @@ class DelegationManager(object):
         # TODO kill corresponding goal from manager ( how to do this? )
 
         self._got_task = False
-        self.__running_task = None
+        self.__tasks = None
 
         return response
 
@@ -181,6 +183,7 @@ class DelegationManager(object):
         auctioneer_name = request.name
         auction_id = request.auction_id
         goal_representation = request.goal_representation
+        goal_name = request.goal_name
 
         self.__loginfo(str(auctioneer_name) + " sent a precommit for his auction " + str(auction_id))
 
@@ -190,7 +193,7 @@ class DelegationManager(object):
         response.still_biding = False
         response.new_proposal = 0
 
-        if self._got_task or not self.__taking_tasks_possible:
+        if not self.check_possible_tasks() or not self.__taking_tasks_possible:
             self.__loginfo("Taking a task is currently not possible")
             return response
 
@@ -207,9 +210,8 @@ class DelegationManager(object):
         if new_cost <= request.old_proposal:
             self.__loginfo("Have accepted a contract from " + str(auctioneer_name))
             response.acceptance = True
-            new_task = Task(auction_id=auction_id, auctioneer_name=auctioneer_name)
-            self._got_task = True
-            self.__running_task = new_task
+            new_task = Task(auction_id=auction_id, auctioneer_name=auctioneer_name, goal_name=goal_name)
+            self.add_task(new_task)
 
         else:
             self.__loginfo("Earlier proposed cost is lower than new cost:" + str(request.old_proposal) + "<" + str(new_cost))
@@ -249,7 +251,7 @@ class DelegationManager(object):
 
         return ProposeResponse()
 
-    def __failure_callback(self, request):
+    def __failure_callback(self, request):      # TODO myb not usefull anymore
         """
         Callback for failure service call
 
@@ -310,7 +312,7 @@ class DelegationManager(object):
             # Not bidding if i cannot perform tasks in general
             return
 
-        if self._got_task:
+        if not self.check_possible_tasks():
             # not bidding while running tasks for someone else
             self.__loginfo("Wont bid, because i already have a task")
             return
@@ -415,7 +417,7 @@ class DelegationManager(object):
             self.__logwarn("Terminate call failed")
             raise DelegationServiceError("Call failed: " + str(service_name))
 
-    def __send_failure(self, auctioneer_name, auction_id):
+    def __send_failure(self, auctioneer_name, auction_id):  # TODO failure deprecated?
         """
         Sends a Failure service-call for the specified name, id
 
@@ -464,6 +466,31 @@ class DelegationManager(object):
 
     # ------ Simple Getter/Setter for members ------
 
+    def add_task(self, new_task):
+        """
+        Adds the task to the task list if possible
+
+        :param new_task: the new task
+        :raises Exception: if it cant be added
+        """
+
+        if len(self.__tasks) < self.__max_tasks:
+            self.__tasks.append(new_task)
+        else:
+            raise Exception     # TODO specific exception
+
+    def check_possible_tasks(self):
+        """
+        Checks whether additional tasks are possible right now or not
+
+        :return: whether additional tasks are possible right now
+        """
+
+        if len(self.__tasks) >= self.__max_tasks:
+            return False
+        else:
+            return True
+
     def get_delegation(self, auction_id):
         """
         Gets the delegation with this auction_id or raises an exception if
@@ -481,18 +508,20 @@ class DelegationManager(object):
         # if no delegation with this name exists
         raise LookupError("No delegation with the auction_id " + str(auction_id))
 
-    def get_task(self):     # TODO possibly more than one running task
+    def get_task_by_goal_name(self, goal_name):
         """
-        Returns the currently running task
+        Returns a currently running task with the given goal
 
+        :param goal_name: name of the goal that the task has
         :return: the running task
-        :raises LookupError: if there is no task
+        :raises LookupError: if there is no task with that goal
         """
 
-        if self._got_task:
-            return self.__running_task
-        else:
-            raise LookupError("Got no task currently")
+        for task in self.__tasks:
+            if task.get_goal_name() == goal_name:
+                return task
+
+        raise LookupError("No task with the goal named " + str(goal_name))
 
     def get_new_auction_id(self):
         """
@@ -510,6 +539,15 @@ class DelegationManager(object):
             self.__auction_id = 0
 
         return self.__auction_id
+
+    def get_manager_name(self):
+        """
+        Gets the manager name
+
+        :return: name of this delegation manager
+        """
+
+        return self._name
 
     # ------ Make auctions etc ------
 
@@ -654,7 +692,7 @@ class DelegationManager(object):
 
         delegation.state.set_finished()
 
-    def failure(self):
+    def failure(self):  # TODO do different stuff
         """
         Sends a Failure service-call for the current task
 
@@ -662,11 +700,11 @@ class DelegationManager(object):
         """
 
         # TODO catch exception/make sure failure is done right
-        self.__send_failure(auctioneer_name=self.__running_task.get_auctioneer_name(), auction_id=self.__running_task.get_auction_id())
+        self.__send_failure(auctioneer_name=self.__tasks.get_auctioneer_name(), auction_id=self.__tasks.get_auction_id())
 
         # TODO possibly handle at a higher level
         self._got_task = False
-        self.__running_task = None
+        self.__tasks = None
 
     def delegate(self, goal_wrapper, auction_steps=3):
         """

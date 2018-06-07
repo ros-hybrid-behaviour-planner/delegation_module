@@ -5,16 +5,16 @@ class Task(object):
     Class that represents a task in context of the DelegationManager
     """
 
-    def __init__(self, auction_id, auctioneer_name):
+    def __init__(self, auction_id, auctioneer_name, goal_name):
         """
         Constructor
 
         :param auction_id: ID of the corresponding auction
         :param auctioneer_name: name of the auctioneer (my employer)
+        :param goal_name: name of the corresponding goal (in the RHBP Manager)
         """
 
-        # TODO myb a reference to the corresponding goal
-
+        self.__goal_name = goal_name
         self.__auction_id = auction_id
         self.__auctioneer_name = auctioneer_name
 
@@ -35,3 +35,13 @@ class Task(object):
         """
 
         return self.__auctioneer_name
+
+    def get_goal_name(self):
+        """
+        Gets the name of corresponding goal
+
+        :return: name of the goal
+        """
+
+        return self.__goal_name
+

@@ -1,5 +1,6 @@
 string goal_representation
 string name
+string goal_name
 uint32 auction_id
 float64 old_proposal
 ---
