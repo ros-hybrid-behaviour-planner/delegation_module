@@ -29,6 +29,7 @@ class DelegationManager(object):
     failure_suffix = "/failure"
     terminate_suffix = "/terminate"
     cfp_topic_name = "CFP_Topic"
+    SERVICE_TIMEOUT = 2     # should be configured according to system specs
 
     # ------ Initiation methods ------
 
@@ -347,7 +348,7 @@ class DelegationManager(object):
 
         service_name = target_name + self.propose_suffix
         try:
-            rospy.wait_for_service(service_name)
+            rospy.wait_for_service(service=service_name, timeout=self.SERVICE_TIMEOUT)
         except rospy.ROSException:
             self.__logwarn("Waiting to long for service: " + str(service_name))
             raise DelegationServiceError("Waiting to long: " + str(service_name))
@@ -377,7 +378,7 @@ class DelegationManager(object):
 
         service_name = target_name + self.precom_suffix
         try:
-            rospy.wait_for_service(service_name)
+            rospy.wait_for_service(service=service_name, timeout=self.SERVICE_TIMEOUT)
         except rospy.ROSException:
             self.__logwarn("Waiting to long for service: " + str(service_name))
             raise DelegationServiceError("Waiting to long: " + str(service_name))
@@ -405,7 +406,7 @@ class DelegationManager(object):
 
         service_name = target_name + self.terminate_suffix
         try:
-            rospy.wait_for_service(service_name)
+            rospy.wait_for_service(service=service_name, timeout=self.SERVICE_TIMEOUT)
         except rospy.ROSException:
             self.__logwarn("Waiting to long for service: " + str(service_name))
             raise DelegationServiceError("Waiting to long: " + str(service_name))
@@ -430,7 +431,7 @@ class DelegationManager(object):
 
         service_name = auctioneer_name + self.failure_suffix
         try:
-            rospy.wait_for_service(service_name)
+            rospy.wait_for_service(service=service_name, timeout=self.SERVICE_TIMEOUT)
         except rospy.ROSException:
             self.__logwarn("Waiting to long for service: " + str(service_name))
             raise DelegationServiceError("Waiting to long: " + str(service_name))
