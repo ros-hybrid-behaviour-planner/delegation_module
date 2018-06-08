@@ -33,17 +33,19 @@ class DelegationManager(object):
 
     # ------ Initiation methods ------
 
-    def __init__(self, manager_name="", max_tasks=0):
+    def __init__(self, instance_name="", max_tasks=0):
         """
         Constructor for the DelegationManager
 
-        :param manager_name: name of this instance of the DelegationManager,
+        :param instance_name: name of this instance of the DelegationManager,
                 should be unique
+        :type instance_name: str
         :param max_tasks: number of maximum tasks that can simultaneously run,
                 set this to 0 for no possible tasks
+        :type max_tasks: int
         """
 
-        self._name = manager_name
+        self._name = instance_name
 
         self.__delegations = []
         self.__auction_id = 0
@@ -57,7 +59,7 @@ class DelegationManager(object):
         self.__init_topics()
         self.__init_services()
 
-        self.__loginfo("Initiated DelelgationManager")
+        self.__loginfo("Initiation of DelegationManager completed")
 
     def __init_topics(self):
         """
@@ -115,6 +117,7 @@ class DelegationManager(object):
         Rospy info logging with information about who is logging
 
         :param string: Message to log
+        :type string: str
         """
 
         rospy.loginfo(str(self._name) + ": " + str(string))
@@ -124,6 +127,7 @@ class DelegationManager(object):
         Rospy warn logging with information about who is logging
 
         :param string: Message to log
+        :type string: str
         """
 
         rospy.logwarn(str(self._name) + ": " + str(string))
@@ -137,7 +141,9 @@ class DelegationManager(object):
         Terminates currently running task
 
         :param request: request of the Terminate.srv type
+        :type request: Terminate
         :return: empty response
+        :rtype: TerminateResponse
         """
 
         auctioneer_name = request.name
@@ -484,11 +490,23 @@ class DelegationManager(object):
             raise Exception     # TODO specific exception
 
     def set_cost_function_evaluator(self, cost_function_evaluator):
+        """
+        Adds a cost_function_evaluator, overwrites old evaluator if there is
+        one and makes it possible for the delegation_manager to compute the cost
+        of tasks with this evaluator
+
+        :param cost_function_evaluator: a working cost_function_evaluator
+        :type cost_function_evaluator: AbstractCostEvaluator
+        """
 
         self.__cost_function_evaluator = cost_function_evaluator
         self.__cost_computable = True
 
     def remove_cost_function_evaluator(self):
+        """
+        Deletes currently used cost_function_evaluator and makes it impossible
+        to compute cost of tasks
+        """
 
         self.__cost_computable = False
         del self.__cost_function_evaluator
@@ -789,7 +807,7 @@ class DelegationManagerSingleton(object):
         """
 
         if DelegationManagerSingleton.__instance is None:
-            DelegationManagerSingleton.__instance = DelegationManager(manager_name=manager_name)
+            DelegationManagerSingleton.__instance = DelegationManager(instance_name=manager_name)
         else:
             # TODO myb change DelegationManager if formerly taking_tasks was false and this one is true
             rospy.loginfo("There is already an instance of the DelegationManager in this process")

@@ -10,8 +10,11 @@ class Task(object):
         Constructor
 
         :param auction_id: ID of the corresponding auction
+        :type auction_id: int
         :param auctioneer_name: name of the auctioneer (my employer)
+        :type auctioneer_name: str
         :param goal_name: name of the corresponding goal (in the RHBP Manager)
+        :type goal_name: str
         """
 
         self.__goal_name = goal_name
@@ -23,6 +26,7 @@ class Task(object):
         Gets the ID of the auction corresponding to this task
 
         :return: the auction ID
+        :rtype: int
         """
 
         return self.__auction_id
@@ -32,6 +36,7 @@ class Task(object):
         Gets the name of the auctioneer (my employer)
 
         :return: name of the auctioneer
+        :rtype: str
         """
 
         return self.__auctioneer_name
@@ -41,6 +46,7 @@ class Task(object):
         Gets the name of corresponding goal
 
         :return: name of the goal
+        :rtype: str
         """
 
         return self.__goal_name
