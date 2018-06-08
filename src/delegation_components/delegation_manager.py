@@ -33,7 +33,7 @@ class DelegationManager(object):
 
     # ------ Initiation methods ------
 
-    def __init__(self, manager_name="", max_tasks=0, taking_tasks_possible=False, cost_function_evaluator=None):
+    def __init__(self, manager_name="", max_tasks=0):
         """
         Constructor for the DelegationManager
 
@@ -41,9 +41,6 @@ class DelegationManager(object):
                 should be unique
         :param max_tasks: number of maximum tasks that can simultaneously run,
                 set this to 0 for no possible tasks
-        :param taking_tasks_possible: whether this is instance can actually
-                take tasks or just delegate them
-        :param cost_function_evaluator: an instance of a CostEvaluator
         """
 
         self._name = manager_name
@@ -52,10 +49,9 @@ class DelegationManager(object):
         self.__auction_id = 0
 
         self.__max_tasks = max_tasks
-        self.__taking_tasks_possible = taking_tasks_possible
-        if taking_tasks_possible and cost_function_evaluator is None:
-            rospy.logerr("Initiating a DelegationManager, that has to be able to take tasks without a cost-function!")
-        self.__cost_function_evaluator = cost_function_evaluator
+
+        self.__cost_function_evaluator = None
+        self.__cost_computable = False
         self.__tasks = []
 
         self.__init_topics()
@@ -194,9 +190,15 @@ class DelegationManager(object):
         response.still_biding = False
         response.new_proposal = 0
 
-        if not self.check_possible_tasks() or not self.__taking_tasks_possible:
-            self.__loginfo("Taking a task is currently not possible")
-            return response
+        if not self.check_possible_tasks():
+            # not bidding if no new task possible right now or in general
+            self.__loginfo("Wont bid, because i already have enough tasks or cannot take any")
+            return
+
+        if not self.__cost_computable:
+            # no cost computation available
+            self.__loginfo("Wont bid, because i cannot compute the cost")
+            return
 
         try:
             new_cost, possible_goal = self.__cost_function_evaluator(goal_representation)
@@ -309,13 +311,14 @@ class DelegationManager(object):
 
         # TODO should i bid this way for my OWN auctions?
 
-        if not self.__taking_tasks_possible:
-            # Not bidding if i cannot perform tasks in general
+        if not self.check_possible_tasks():
+            # not bidding if i cannot take tasks right now or in general
+            self.__loginfo("Wont bid, because i already have enough tasks or cannot take any")
             return
 
-        if not self.check_possible_tasks():
-            # not bidding while running tasks for someone else
-            self.__loginfo("Wont bid, because i already have a task")
+        if not self.__cost_computable:
+            # no cost computation available
+            self.__loginfo("Wont bid, because i cannot compute the cost")
             return
 
         try:
@@ -479,6 +482,17 @@ class DelegationManager(object):
             self.__tasks.append(new_task)
         else:
             raise Exception     # TODO specific exception
+
+    def set_cost_function_evaluator(self, cost_function_evaluator):
+
+        self.__cost_function_evaluator = cost_function_evaluator
+        self.__cost_computable = True
+
+    def remove_cost_function_evaluator(self):
+
+        self.__cost_computable = False
+        del self.__cost_function_evaluator
+        self.__cost_function_evaluator = None
 
     def check_possible_tasks(self):
         """
@@ -775,7 +789,7 @@ class DelegationManagerSingleton(object):
         """
 
         if DelegationManagerSingleton.__instance is None:
-            DelegationManagerSingleton.__instance = DelegationManager(manager_name=manager_name, taking_tasks_possible=taking_tasks_possible, cost_function_evaluator=cost_function_evaluator)
+            DelegationManagerSingleton.__instance = DelegationManager(manager_name=manager_name)
         else:
             # TODO myb change DelegationManager if formerly taking_tasks was false and this one is true
             rospy.loginfo("There is already an instance of the DelegationManager in this process")
