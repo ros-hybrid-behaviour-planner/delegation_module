@@ -19,6 +19,15 @@ class GoalWrapperBase(object):
         self.__created_goal = False
         self.__goal = None
 
+    def __del__(self):
+
+        if self.__created_goal:
+            del self.__goal
+
+    def get_goal_name(self):
+
+        return self.__name
+
     def get_goal_representation(self):
         """
         Returns a Representation of a goal, that can be used
@@ -88,6 +97,10 @@ class RHBPGoalWrapper(GoalWrapperBase):
         self.__conditions = conditions
         self.__satisfaction_threshold = satisfaction_threshold
 
+    def __del__(self):
+        super(RHBPGoalWrapper, self).__del__()
+        del self.__conditions
+
     def get_goal_representation(self):
         """
         Returns the representation of the goal in form
@@ -107,6 +120,6 @@ class RHBPGoalWrapper(GoalWrapperBase):
                 receive the goal
         """
 
-        self.__goal = GoalBase(name=self.__name, plannerPrefix=name, conditions=self.__conditions, satisfaction_threshold=self.__satisfaction_threshold)
+        self.__goal = GoalBase(name=self.get_goal_name(), plannerPrefix=name, conditions=self.__conditions, satisfaction_threshold=self.__satisfaction_threshold)
         self.__created_goal = True
         # TODO raise exception if it doesnt work (first find out if it worked...)

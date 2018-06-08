@@ -85,6 +85,8 @@ class PDDLCostEvaluator(AbstractCostEvaluator):
         except Exception as e:  # catch any exception
             raise DelegationPlanningWarning(str(e.message))
 
+        self.__last_cost, self.__last_possibility = cost, possible
+
         return cost, possible
 
     def __compute_cost(self, plan):

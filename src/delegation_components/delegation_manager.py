@@ -51,10 +51,11 @@ class DelegationManager(object):
         self.__auction_id = 0
 
         self.__max_tasks = max_tasks
+        self.__tasks = []
 
         self.__cost_function_evaluator = None
         self.__cost_computable = False
-        self.__tasks = []
+        self.__registered_manager = ""
 
         self.__init_topics()
         self.__init_services()
@@ -195,6 +196,7 @@ class DelegationManager(object):
         response.acceptance = False
         response.still_biding = False
         response.new_proposal = 0
+        response.manager_name = ""
 
         if not self.check_possible_tasks():
             # not bidding if no new task possible right now or in general
@@ -207,7 +209,7 @@ class DelegationManager(object):
             return
 
         try:
-            new_cost, possible_goal = self.__cost_function_evaluator(goal_representation)
+            new_cost, possible_goal = self.__cost_function_evaluator.compute_cost_and_possibility(goal_representation=goal_representation)
         except DelegationPlanningWarning as e:
             self.__loginfo("Goal not possible. PlannerMessage: " + str(e.message))
             new_cost, possible_goal = -1, False
@@ -221,6 +223,7 @@ class DelegationManager(object):
             response.acceptance = True
             new_task = Task(auction_id=auction_id, auctioneer_name=auctioneer_name, goal_name=goal_name)
             self.add_task(new_task)
+            response.manager_name = self.__registered_manager
 
         else:
             self.__loginfo("Earlier proposed cost is lower than new cost:" + str(request.old_proposal) + "<" + str(new_cost))
@@ -328,7 +331,7 @@ class DelegationManager(object):
             return
 
         try:
-            cost, possible_goal = self.__cost_function_evaluator(goal_representation)
+            cost, possible_goal = self.__cost_function_evaluator.compute_cost_and_possibility(goal_representation=goal_representation)
         except DelegationPlanningWarning as e:
             self.__loginfo("Goal not possible. PlannerMessage: " + str(e.message))
             cost, possible_goal = -1, False
@@ -370,7 +373,7 @@ class DelegationManager(object):
             self.__logwarn("Propose call failed")
             raise DelegationServiceError("Call failed: " + str(service_name))
 
-    def __send_precom(self, target_name, auction_id, proposal_value, goal_representation):
+    def __send_precom(self, target_name, auction_id, proposal_value, goal_representation, goal_name):
         """
         Calls the Precommit service of the winning bidder of this delegation
 
@@ -394,7 +397,7 @@ class DelegationManager(object):
 
         try:
             send_precom = rospy.ServiceProxy(service_name, Precommit)
-            response = send_precom(goal_representation, self._name, auction_id, proposal_value)
+            response = send_precom(goal_representation, self._name, goal_name, auction_id, proposal_value)
         except rospy.ServiceException:
             self.__logwarn("Precommit call failed")
             raise DelegationServiceError("Call failed: " + str(service_name))
@@ -489,7 +492,7 @@ class DelegationManager(object):
         else:
             raise Exception     # TODO specific exception
 
-    def set_cost_function_evaluator(self, cost_function_evaluator):
+    def set_cost_function_evaluator(self, cost_function_evaluator, manager_name):
         """
         Adds a cost_function_evaluator, overwrites old evaluator if there is
         one and makes it possible for the delegation_manager to compute the cost
@@ -497,10 +500,13 @@ class DelegationManager(object):
 
         :param cost_function_evaluator: a working cost_function_evaluator
         :type cost_function_evaluator: AbstractCostEvaluator
+        :param manager_name: name of the manager the evaluator is from
+        :type manager_name: str
         """
 
         self.__cost_function_evaluator = cost_function_evaluator
         self.__cost_computable = True
+        self.__registered_manager = manager_name
 
     def remove_cost_function_evaluator(self):
         """
@@ -573,7 +579,7 @@ class DelegationManager(object):
 
         return self.__auction_id
 
-    def get_manager_name(self):
+    def get_name(self):
         """
         Gets the manager name
 
@@ -597,6 +603,7 @@ class DelegationManager(object):
 
         response = self.__send_precom(target_name=proposal.get_name(),
                                       auction_id=delegation.get_auction_id(),
+                                      goal_name=delegation.get_goal_name(),
                                       proposal_value=proposal.get_value(),
                                       goal_representation=delegation.get_goal_representation())
         return response
@@ -655,6 +662,7 @@ class DelegationManager(object):
 
             try:
                 response = self.__precom(proposal=best_proposal, delegation=delegation)
+                manager_name = response.manager_name
             except DelegationServiceError as e:
                 # if the best bid is not reachable, try next best bid, instead of giving up auction
                 self.__logwarn("Precommit failed, trying next best Bidder if applicable (error_message:\"" + str(e.message) + "\")")
@@ -668,15 +676,16 @@ class DelegationManager(object):
 
                 try:
                     # set contractor and change delegation state
-                    delegation.set_contractor(name=bidder_name)
+                    delegation.set_contractor(name=bidder_name)     # TODO this is the name of DelegationManager do i want the Manager instead?
                 except DelegationContractorError:
                     self.__logwarn("Contractor has already been chosen, while i am trying to find one")
                     up_for_delegation = False
                     break
 
-                # actually send the goal to the bidder
+                # actually send the goal to the bidders Manager
                 try:
-                    delegation.send_goal(name=bidder_name)
+                    rospy.loginfo("Trying to send the goal to the manager with the name " + str(manager_name))
+                    delegation.send_goal(name=manager_name)
                 except Exception as e:  # TODO really to broad / specify this exception when its chosen
                     self.__logwarn("Sending goal was not possible! (error_message:\"" + str(e.message) + "\")")
                     # TODO make sure this works right at the side of the bidder (myb send terminate)
@@ -685,6 +694,7 @@ class DelegationManager(object):
 
                 # Contractor has been found
                 up_for_delegation = False
+                break
 
             elif response.still_biding:
                 self.__loginfo(str(bidder_name) + " has given a new proposal of " + str(response.new_proposal) + " for my auction " + str(
@@ -701,8 +711,11 @@ class DelegationManager(object):
 
         if up_for_delegation:
             self.__logwarn("No possible contractor has been found for my auction " + str(auction_id))
-
             # TODO Right handling, possible: send new CFP, give up or myb depending on needed delegation or just possible delegation
+        else:
+            self.__loginfo("Auction with ID " + str(delegation.get_auction_id()) + " is finished")
+
+        return
 
     # ------ Functions to interact with the DelegationManager ------
 
@@ -788,7 +801,7 @@ class DelegationManagerSingleton(object):
 
     __instance = None
 
-    def __init__(self, manager_name="", taking_tasks_possible=False, cost_function_evaluator=None):
+    def __init__(self, manager_name="", max_tasks=0):
         """
         Constructor of the DelegationManagerSingleton
 
@@ -801,13 +814,10 @@ class DelegationManagerSingleton(object):
         :param manager_name: name of instance the DelegationManager, should be
                 unique and the name of the normal manager if this
                 DelegationManager can take tasks
-        :param taking_tasks_possible: whether this is instance can actually
-                take tasks or just delegate them
-        :param cost_function_evaluator: an instance of a CostEvaluator
         """
 
         if DelegationManagerSingleton.__instance is None:
-            DelegationManagerSingleton.__instance = DelegationManager(instance_name=manager_name)
+            DelegationManagerSingleton.__instance = DelegationManager(instance_name=manager_name, max_tasks=max_tasks)
         else:
             # TODO myb change DelegationManager if formerly taking_tasks was false and this one is true
             rospy.loginfo("There is already an instance of the DelegationManager in this process")

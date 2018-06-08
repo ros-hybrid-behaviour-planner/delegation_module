@@ -207,6 +207,10 @@ class Delegation(object):
         self.__got_contractor = False
         self.state.set_waiting_for_proposal()
 
+    def get_goal_name(self):
+
+        return self.__goal_wrapper.get_goal_name()
+
     def send_goal(self, name):
         """
         Sends goal to manager with that name
