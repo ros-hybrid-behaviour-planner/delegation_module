@@ -7,3 +7,4 @@ float64 old_proposal
 bool acceptance
 bool still_biding
 float64 new_proposal
+string manager_name
