@@ -1,4 +1,4 @@
 <launch>
-    <node pkg="task_decomposition_module" name="PassiveNode" type="delegation_manager.py" />
+    <node pkg="task_decomposition_module" name="PassiveNode" type="passive_node.py" />
     <test pkg="task_decomposition_module" test-name="DelegationManagerTest" type="delegation_manager_test.py" />
 </launch>
