@@ -123,3 +123,12 @@ class RHBPGoalWrapper(GoalWrapperBase):
         self.__goal = GoalBase(name=self.get_goal_name(), plannerPrefix=name, conditions=self.__conditions, satisfaction_threshold=self.__satisfaction_threshold)
         self.__created_goal = True
         # TODO raise exception if it doesnt work (first find out if it worked...)
+
+    def terminate_goal(self):
+
+        if self.goal_is_created():
+            self.__created_goal = False
+            self.__goal.__del__()
+            self.__goal = None
+
+

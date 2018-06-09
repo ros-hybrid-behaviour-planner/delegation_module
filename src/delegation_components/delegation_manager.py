@@ -790,6 +790,22 @@ class DelegationManager(object):
             if delegation.decrement_and_check_steps():
                 self.__end_auction(delegation=delegation)
 
+    def end_task(self, goal_name):
+        """
+        Tries to end the task with a goal with this name
+
+        :param goal_name: name of the goal that is no longer a task
+        :type goal_name: str
+        """
+
+        try:
+            task = self.get_task_by_goal_name(goal_name=goal_name)
+            self.__tasks.remove(task)
+            self.__loginfo("Task with goal_name " + goal_name + " was finished")
+            del task
+        except LookupError:
+            # this goal was no task given by a different manager
+            pass
 
 class DelegationManagerSingleton(object):
     """
