@@ -4,8 +4,7 @@ import rospy
 
 from task_decomposition_module.msg import CFP
 from task_decomposition_module.srv import Precommit, PrecommitResponse, \
-    Propose, ProposeResponse, Failure, FailureResponse, Terminate, \
-    TerminateResponse
+    Propose, ProposeResponse, Failure, FailureResponse
 from delegation_errors import DelegationServiceError, DelegationPlanningWarning, DelegationContractorError
 from delegation import Delegation, Proposal
 from task import Task
@@ -27,7 +26,6 @@ class DelegationManager(object):
     precom_suffix = "/precom"
     propose_suffix = "/propose"
     failure_suffix = "/failure"
-    terminate_suffix = "/terminate"
     cfp_topic_name = "CFP_Topic"
     SERVICE_TIMEOUT = 2     # should be configured according to system specs
 
@@ -78,7 +76,6 @@ class DelegationManager(object):
         self._precom_service = rospy.Service(name=self._name+self.precom_suffix, service_class=Precommit, handler=self.__precom_callback)
         self._propose_service = rospy.Service(name=self._name+self.propose_suffix, service_class=Propose, handler=self.__propose_callback)
         self._failure_service = rospy.Service(name=self._name+self.failure_suffix, service_class=Failure, handler=self.__failure_callback)
-        self._terminate_service = rospy.Service(name=self._name+self.terminate_suffix, service_class=Terminate, handler=self.__terminate_callback)
 
     # ------ Deletion methods ------
 
@@ -101,7 +98,6 @@ class DelegationManager(object):
         self._precom_service.shutdown()
         self._propose_service.shutdown()
         self._failure_service.shutdown()
-        self._terminate_service.shutdown()
 
     def __stop_topics(self):
         """
@@ -134,42 +130,6 @@ class DelegationManager(object):
         rospy.logwarn(str(self._name) + ": " + str(string))
 
     # ------ Callback functions ------
-
-    def __terminate_callback(self, request):    # TODO myb not usefull anymore, outdated
-        """
-        Callback for terminate service calls
-
-        Terminates currently running task
-
-        :param request: request of the Terminate.srv type
-        :type request: Terminate
-        :return: empty response
-        :rtype: TerminateResponse
-        """
-
-        auctioneer_name = request.name
-        auction_id = request.auction_id
-        self.__loginfo(str(auctioneer_name) + " is trying to terminate the task with his auction id " + str(auction_id))
-
-        response = TerminateResponse()
-
-        # check if the terminated task is really running
-        if not True:
-            self.__logwarn("Termination for a task, that i dont have")
-            return response
-        # and the sender of the call is the one who gave me this task
-        if self.__tasks.get_auction_id() != auction_id or self.__tasks.get_auctioneer_name() != auctioneer_name:
-            self.__logwarn("Termination for a task, that i dont have")
-            return response
-
-        self.__loginfo("Stopping currently running task")
-
-        # TODO kill corresponding goal from manager ( how to do this? )
-
-        self._got_task = False
-        self.__tasks = None
-
-        return response
 
     def __precom_callback(self, request):
         """
@@ -403,32 +363,6 @@ class DelegationManager(object):
             raise DelegationServiceError("Call failed: " + str(service_name))
 
         return response
-
-    def __send_terminate(self, target_name, auction_id):
-        """
-        Calls the Terminate service of the specified target for the auction with
-        this ID
-
-        :param target_name: name of the target of the call
-        :param auction_id: ID of the auction for this termination
-        :raises DelegationServiceError: if call failed
-        """
-
-        self.__loginfo("Sending a terminate to " + str(target_name) + " for my auction " + str(auction_id))
-
-        service_name = target_name + self.terminate_suffix
-        try:
-            rospy.wait_for_service(service=service_name, timeout=self.SERVICE_TIMEOUT)
-        except rospy.ROSException:
-            self.__logwarn("Waiting to long for service: " + str(service_name))
-            raise DelegationServiceError("Waiting to long: " + str(service_name))
-
-        try:
-            send_terminate = rospy.ServiceProxy(service_name, Terminate)
-            send_terminate(auction_id, self._name)
-        except rospy.ServiceException:
-            self.__logwarn("Terminate call failed")
-            raise DelegationServiceError("Call failed: " + str(service_name))
 
     def __send_failure(self, auctioneer_name, auction_id):  # TODO failure deprecated?
         """
@@ -721,11 +655,7 @@ class DelegationManager(object):
 
     def terminate(self, delegation):
         """
-        Calls the Terminate service of the current contractor of this delegation
-
-        Changes the state of the delegation to finished
-
-        Wrapper for the call
+        TODO
 
         :param delegation: the delegation that should be terminated
         """
@@ -733,8 +663,7 @@ class DelegationManager(object):
         contractor = delegation.get_contractor()
         auction_id = delegation.get_auction_id()
 
-        self.__loginfo("Terminating contract with " + str(contractor) + " in my auction " + str(auction_id))
-        self.__send_terminate(target_name=contractor, auction_id=auction_id)    # TODO catch exception/make sure termination is done right
+        # TODO do termination
 
         delegation.state.set_finished()
 
@@ -807,6 +736,7 @@ class DelegationManager(object):
             # this goal was no task given by a different manager
             pass
 
+
 class DelegationManagerSingleton(object):
     """
     Class that is a singleton container for the DelegationManager
@@ -864,4 +794,3 @@ if __name__ == '__main__':
 
     rospy.loginfo("Spinning")
     rospy.spin()
-
