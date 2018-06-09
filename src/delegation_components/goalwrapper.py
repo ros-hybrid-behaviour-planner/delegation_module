@@ -125,6 +125,9 @@ class RHBPGoalWrapper(GoalWrapperBase):
         # TODO raise exception if it doesnt work (first find out if it worked...)
 
     def terminate_goal(self):
+        """
+        Terminates (unregister and deletes) the created goal
+        """
 
         if self.goal_is_created():
             self.__created_goal = False
