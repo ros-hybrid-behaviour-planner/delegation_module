@@ -5,7 +5,7 @@ import rospy
 from task_decomposition_module.msg import CFP
 from task_decomposition_module.srv import Precommit, PrecommitResponse, \
     Propose, ProposeResponse, Failure, FailureResponse
-from delegation_errors import DelegationServiceError, DelegationPlanningWarning, DelegationContractorError
+from delegation_errors import DelegationServiceError, DelegationPlanningWarning, DelegationContractorError, DelegationError
 from delegation import Delegation, Proposal
 from task import Task
 
@@ -620,9 +620,12 @@ class DelegationManager(object):
                 try:
                     rospy.loginfo("Trying to send the goal to the manager with the name " + str(manager_name))
                     delegation.send_goal(name=manager_name)
-                except Exception as e:  # TODO really to broad / specify this exception when its chosen
+                except DelegationError as e:
                     self.__logwarn("Sending goal was not possible! (error_message:\"" + str(e.message) + "\")")
-                    # TODO make sure this works right at the side of the bidder (myb send terminate)
+
+                    # make sure goal is not living anymore and contractor is removed
+                    delegation.terminate_contract()
+
                     delegation.remove_proposal(proposal=best_proposal)
                     continue
 

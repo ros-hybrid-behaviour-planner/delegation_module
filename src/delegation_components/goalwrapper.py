@@ -1,5 +1,6 @@
 
 from behaviour_components.goals import GoalBase
+from delegation_components.delegation_errors import DelegationError
 
 
 class GoalWrapperBase(object):
@@ -118,11 +119,15 @@ class RHBPGoalWrapper(GoalWrapperBase):
 
         :param name: prefix of the manager, that should
                 receive the goal
+        :raises DelegationError: if there is any problem with the goal creation
         """
-
-        self.__goal = GoalBase(name=self.get_goal_name(), plannerPrefix=name, conditions=self.__conditions, satisfaction_threshold=self.__satisfaction_threshold)
-        self.__created_goal = True
-        # TODO raise exception if it doesnt work (first find out if it worked...)
+        try:
+            self.__goal = GoalBase(name=self.get_goal_name(), plannerPrefix=name, conditions=self.__conditions, satisfaction_threshold=self.__satisfaction_threshold)
+            self.__created_goal = True
+        except Exception as e:
+            self.__created_goal = False
+            self.__goal = None
+            raise DelegationError("Sending goal raised exception: " + e.message)
 
     def terminate_goal(self):
         """
@@ -133,5 +138,3 @@ class RHBPGoalWrapper(GoalWrapperBase):
             self.__created_goal = False
             self.__goal.__del__()
             self.__goal = None
-
-

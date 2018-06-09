@@ -203,11 +203,24 @@ class Delegation(object):
         removes contractor
         """
 
-        self.__contractor = ""
-        self.__got_contractor = False
+        self.remove_contractor()
         self.state.set_waiting_for_proposal()
 
+    def remove_contractor(self):
+        """
+        Removes the contractor if set
+        """
+
+        self.__contractor = ""
+        self.__got_contractor = False
+
     def get_goal_name(self):
+        """
+        Returns the name of the affiliated goal
+
+        :return: name of the goal
+        :rtype: str
+        """
 
         return self.__goal_wrapper.get_goal_name()
 
@@ -215,12 +228,22 @@ class Delegation(object):
         """
         Sends goal to manager with that name
 
+        If a Exception is raised in the goalwrapper it will be forwarded
+
         :param name: name of the manager (particular usage depends on system,
                 for rhbp use planner_prefix of the manager)
+        :type name: str
         """
 
         self.__goal_wrapper.send_goal(name=name)
-        # TODO myb catch exceptions / if they are specified
+
+    def terminate_contract(self):
+        """
+        Removes contractor and terminates goal
+        """
+
+        self.remove_contractor()
+        self.__goal_wrapper.terminate_goal()
 
 
 class Proposal(object):
