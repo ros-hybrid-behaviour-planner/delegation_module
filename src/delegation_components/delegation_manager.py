@@ -278,7 +278,7 @@ class DelegationManager(object):
 
         self.__loginfo("Got CFP from " + str(auctioneer_name) + " with ID " + str(auction_id))
 
-        # TODO should i bid this way for my OWN auctions?
+        # TODO should i bid this way for my OWN auctions? No!
 
         if not self.check_possible_tasks():
             # not bidding if i cannot take tasks right now or in general
@@ -656,19 +656,21 @@ class DelegationManager(object):
 
     # ------ Functions to interact with the DelegationManager ------
 
-    def terminate(self, delegation):
+    def terminate(self, auction_id):
         """
-        TODO
+        Ends a delegation and does not try to delegate the task again
 
-        :param delegation: the delegation that should be terminated
+        :param auction_id: the id of the delegation that should be terminated
+        :type auction_id: int
         """
 
-        contractor = delegation.get_contractor()
-        auction_id = delegation.get_auction_id()
+        try:
+            delegation = self.get_delegation(auction_id=auction_id)
+        except LookupError:
+            self.__loginfo("Trying to terminate delegation with the auction id " + str(auction_id) + ", that doesnt exist")
+            return
 
-        # TODO do termination
-
-        delegation.state.set_finished()
+        delegation.finish_delegation()
 
     def failure(self):  # TODO do different stuff
         """
@@ -677,12 +679,8 @@ class DelegationManager(object):
         Wrapper for the call
         """
 
-        # TODO catch exception/make sure failure is done right
-        self.__send_failure(auctioneer_name=self.__tasks.get_auctioneer_name(), auction_id=self.__tasks.get_auction_id())
-
-        # TODO possibly handle at a higher level
-        self._got_task = False
-        self.__tasks = None
+        # TODO send a failure right, if needed
+        # self.__send_failure(auctioneer_name=self.__tasks.get_auctioneer_name(), auction_id=self.__tasks.get_auction_id())
 
     def delegate(self, goal_wrapper, auction_steps=3):
         """

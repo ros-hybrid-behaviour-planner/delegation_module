@@ -203,7 +203,7 @@ class Delegation(object):
         removes contractor
         """
 
-        self.remove_contractor()
+        self.terminate_contract()
         self.state.set_waiting_for_proposal()
 
     def remove_contractor(self):
@@ -244,6 +244,12 @@ class Delegation(object):
 
         self.remove_contractor()
         self.__goal_wrapper.terminate_goal()
+
+    def finish_delegation(self):
+
+        self.terminate_contract()
+        self.reset_proposals()
+        self.state.set_finished()
 
 
 class Proposal(object):
