@@ -1,6 +1,11 @@
+class DelegationError(Exception):
+    """
+    General Error in the task_decomposition_module
+    """
+    pass
 
 
-class DelegationServiceError(Exception):
+class DelegationServiceError(DelegationError):
     """
     Error that represents any problem with the sending of a
     ServiceCall/TopicMessage
@@ -16,7 +21,7 @@ class DelegationPlanningWarning(Warning):
     pass
 
 
-class DelegationContractorError(Exception):
+class DelegationContractorError(DelegationError):
     """
     Error that shows that there is a problem with getting/setting the
     contractor of a delegation
