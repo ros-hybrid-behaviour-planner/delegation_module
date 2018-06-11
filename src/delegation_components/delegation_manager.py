@@ -564,7 +564,9 @@ class DelegationManager(object):
             self.__send_cfp(goal_representation=goal_representation, auction_id=auction_id)
         except DelegationServiceError as e:
             self.__logwarn("CFP was not sent right (error_message:\"" + str(e.message) + "\")")
-            # TODO what to do now?
+            # restart auction next step by ending it than (it will restart,
+            # because it has no valid proposals than)
+            delegation.end_auction_next_step()
 
     def __end_auction(self, delegation):    # TODO myb clean this up a bit
         """
@@ -572,7 +574,8 @@ class DelegationManager(object):
         tries to make him the contractor
 
         :param delegation: the delegation of which the auction should end
-        :return: TODO to be determined, if any
+        :return: whether it was successfully ended or not (restarted)
+        :rtype: bool
         """
 
         auction_id = delegation.get_auction_id()
@@ -611,7 +614,7 @@ class DelegationManager(object):
 
                 try:
                     # set contractor and change delegation state
-                    delegation.set_contractor(name=bidder_name)     # TODO this is the name of DelegationManager do i want the Manager instead?
+                    delegation.set_contractor(name=bidder_name)
                 except DelegationContractorError:
                     self.__logwarn("Contractor has already been chosen, while i am trying to find one")
                     up_for_delegation = False
@@ -651,10 +654,10 @@ class DelegationManager(object):
             self.__logwarn("No possible contractor has been found for my auction " + str(auction_id))
             # starting a new delegation (no failure in RHBP possible)
             self.__start_auction(delegation=delegation)
+            return False
         else:
             self.__loginfo("Auction with ID " + str(delegation.get_auction_id()) + " is finished")
-
-        return
+            return True
 
     # ------ Functions to interact with the DelegationManager ------
 

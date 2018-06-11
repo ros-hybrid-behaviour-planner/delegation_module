@@ -84,6 +84,14 @@ class Delegation(object):
 
         return self.__auction_steps == 0
 
+    def end_auction_next_step(self):
+        """
+        Sets the auction_steps to 1 so that the auction will end in the next
+        call of DelegationManager.do_step()
+        """
+
+        self.__auction_steps = 1
+
     def reset_steps(self):
         """
         Resets the current auction_steps to the defined max-value
