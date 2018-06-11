@@ -136,5 +136,5 @@ class RHBPGoalWrapper(GoalWrapperBase):
 
         if self.goal_is_created():
             self.__created_goal = False
-            self.__goal.__del__()
+            self.__goal.__del__()   # unregisters goal
             self.__goal = None

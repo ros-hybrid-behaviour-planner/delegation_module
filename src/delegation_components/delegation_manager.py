@@ -181,9 +181,15 @@ class DelegationManager(object):
 
         if new_cost <= request.old_proposal:
             self.__loginfo("Have accepted a contract from " + str(auctioneer_name))
-            response.acceptance = True
+
             new_task = Task(auction_id=auction_id, auctioneer_name=auctioneer_name, goal_name=goal_name)
-            self.add_task(new_task)
+            try:
+                self.add_task(new_task)
+            except DelegationError as e:
+                self.__logwarn("Failed to add a new Task: " + str(e))
+                return response
+
+            response.acceptance = True
             response.manager_name = self.__registered_manager
 
         else:
@@ -224,7 +230,7 @@ class DelegationManager(object):
 
         return ProposeResponse()
 
-    def __failure_callback(self, request):      # TODO has to change (call unregister of the goal and update information)
+    def __failure_callback(self, request):
         """
         Callback for failure service call
 
@@ -258,7 +264,8 @@ class DelegationManager(object):
             return response
 
         delegation.forbid_bidder(name=contractor_name)
-        delegation.fail_current_delegation()
+        delegation.fail_current_delegation()    # unregisters goal
+
         self.__start_auction(delegation)
 
         return response
@@ -419,13 +426,13 @@ class DelegationManager(object):
         Adds the task to the task list if possible
 
         :param new_task: the new task
-        :raises Exception: if it cant be added
+        :raises DelegationError: if it cant be added
         """
 
         if len(self.__tasks) < self.__max_tasks:
             self.__tasks.append(new_task)
         else:
-            raise Exception     # TODO specific exception
+            raise DelegationError
 
     def set_cost_function_evaluator(self, cost_function_evaluator, manager_name):
         """
@@ -696,7 +703,7 @@ class DelegationManager(object):
         try:
             self.__send_failure(auctioneer_name=task.get_auctioneer_name(), auction_id=task.get_auction_id())
         except DelegationServiceError as e:
-            # TODO
+            # TODO we would have to retry
             pass
 
     def delegate(self, goal_wrapper, auction_steps=3):
