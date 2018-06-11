@@ -8,6 +8,7 @@ from task_decomposition_module.srv import Precommit, PrecommitResponse, \
 from delegation_errors import DelegationServiceError, DelegationPlanningWarning, DelegationContractorError, DelegationError
 from delegation import Delegation, Proposal
 from task import Task
+from goalwrapper import GoalWrapperBase
 
 
 class DelegationManager(object):
@@ -223,7 +224,7 @@ class DelegationManager(object):
 
         return ProposeResponse()
 
-    def __failure_callback(self, request):      # TODO myb not usefull anymore
+    def __failure_callback(self, request):      # TODO has to change (call unregister of the goal and update information)
         """
         Callback for failure service call
 
@@ -364,7 +365,7 @@ class DelegationManager(object):
 
         return response
 
-    def __send_failure(self, auctioneer_name, auction_id):  # TODO failure deprecated?
+    def __send_failure(self, auctioneer_name, auction_id):
         """
         Sends a Failure service-call for the specified name, id
 
@@ -648,7 +649,8 @@ class DelegationManager(object):
 
         if up_for_delegation:
             self.__logwarn("No possible contractor has been found for my auction " + str(auction_id))
-            # TODO Right handling, possible: send new CFP, give up or myb depending on needed delegation or just possible delegation
+            # starting a new delegation (no failure in RHBP possible)
+            self.__start_auction(delegation=delegation)
         else:
             self.__loginfo("Auction with ID " + str(delegation.get_auction_id()) + " is finished")
 
@@ -672,15 +674,27 @@ class DelegationManager(object):
 
         delegation.finish_delegation()
 
-    def failure(self):  # TODO do different stuff
+    def fail_task(self, goal_name):
         """
-        Sends a Failure service-call for the current task
+        Sends a message to the associated contractor, that this task will no
+        longer be pursued, if this is a task that comes from a different source
 
-        Wrapper for the call
+        :param goal_name: name of the goal that failed
+        :type goal_name: str
         """
 
-        # TODO send a failure right, if needed
-        # self.__send_failure(auctioneer_name=self.__tasks.get_auctioneer_name(), auction_id=self.__tasks.get_auction_id())
+        try:
+            task = self.get_task_by_goal_name(goal_name=goal_name)
+        except LookupError:
+            # this goal was not given by a different manager
+            return
+
+        # send a failure right, if needed
+        try:
+            self.__send_failure(auctioneer_name=task.get_auctioneer_name(), auction_id=task.get_auction_id())
+        except DelegationServiceError as e:
+            # TODO
+            pass
 
     def delegate(self, goal_wrapper, auction_steps=3):
         """
@@ -693,8 +707,11 @@ class DelegationManager(object):
 
         :param auction_steps: number of steps
                 that are waited for proposals while the auction is running
+        :type auction_steps: int
         :param goal_wrapper: wrapper for the goal that should be delegated
+        :type goal_wrapper: GoalWrapperBase
         :return: the auction_id of the auction
+        :rtype: int
         """
 
         new = Delegation(goal_wrapper=goal_wrapper, auction_id=self.get_new_auction_id(), auction_steps=auction_steps)
@@ -735,7 +752,7 @@ class DelegationManager(object):
             del task
         except LookupError:
             # this goal was no task given by a different manager
-            pass
+            return
 
 
 class DelegationManagerSingleton(object):

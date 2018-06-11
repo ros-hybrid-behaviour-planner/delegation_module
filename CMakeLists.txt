@@ -59,7 +59,6 @@ add_service_files(
    Precommit.srv
    Propose.srv
    Failure.srv
-   Terminate.srv
 )
 
 ## Generate actions in the 'action' folder
