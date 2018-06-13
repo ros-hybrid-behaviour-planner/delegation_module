@@ -1,6 +1,7 @@
 
 from behaviour_components.goals import GoalBase
 from delegation_components.delegation_errors import DelegationError
+from abc import ABCMeta, abstractmethod
 
 
 class GoalWrapperBase(object):
@@ -8,12 +9,15 @@ class GoalWrapperBase(object):
     Base class for all GoalWrapper used in this package
     """
 
+    __metaclass__ = ABCMeta
+
     def __init__(self, name):
         """
         Constructor that initiates all member that are
         needed by all GoalWrappers
 
         :param name: name of the goal
+        :type name: str
         """
 
         self.__name = name
@@ -21,37 +25,22 @@ class GoalWrapperBase(object):
         self.__goal = None
 
     def __del__(self):
+        """
+        Destructor
+        """
 
         if self.__created_goal:
             del self.__goal
 
     def get_goal_name(self):
+        """
+        Returns the name of the corresponding goal
+
+        :return: name of the goal
+        :rtype: str
+        """
 
         return self.__name
-
-    def get_goal_representation(self):
-        """
-        Returns a Representation of a goal, that can be used
-        to evaluate the cost of accomplishing this goal by some
-        kind of AbstractCostEvaluator
-
-        Needs to be overridden!
-
-        :return: the goal representation
-        """
-
-        raise NotImplementedError
-
-    def send_goal(self, name):
-        """
-        Takes care of sending the goal towards the right agent.
-        The way this can be accomplished depends on the structure
-        of the system
-
-        Needs to be overridden!
-        """
-
-        raise NotImplementedError
 
     def get_goal(self):
         """
@@ -66,11 +55,43 @@ class GoalWrapperBase(object):
         else:
             return self.__goal
 
+    @abstractmethod
+    def get_goal_representation(self):
+        """
+        Returns a Representation of a goal, that can be used
+        to evaluate the cost of accomplishing this goal by some
+        kind of AbstractCostEvaluator
+
+        Needs to be overridden!
+
+        :return: the goal representation
+        :rtype: str
+        """
+
+        raise NotImplementedError
+
+    @abstractmethod
+    def send_goal(self, name):
+        """
+        Takes care of sending the goal towards the right agent.
+        The way this can be accomplished depends on the structure
+        of the system
+
+        Needs to be overridden!
+
+        :param name: name of the manager that the goal is sent to
+        :type name: str
+        """
+
+        raise NotImplementedError
+
+    @abstractmethod
     def goal_is_created(self):
         """
         Checks if a goal has been created
 
         :return: whether a goal has been created or not
+        :rtype: bool
         """
 
         return self.__created_goal
@@ -99,6 +120,10 @@ class RHBPGoalWrapper(GoalWrapperBase):
         self.__satisfaction_threshold = satisfaction_threshold
 
     def __del__(self):
+        """
+        Destructor
+        """
+
         super(RHBPGoalWrapper, self).__del__()
         del self.__conditions
 
