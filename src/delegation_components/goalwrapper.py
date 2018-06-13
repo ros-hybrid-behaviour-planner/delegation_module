@@ -55,6 +55,16 @@ class GoalWrapperBase(object):
         else:
             return self.__goal
 
+    def goal_is_created(self):
+        """
+        Checks if a goal has been created
+
+        :return: whether a goal has been created or not
+        :rtype: bool
+        """
+
+        return self.__created_goal
+
     @abstractmethod
     def get_goal_representation(self):
         """
@@ -86,15 +96,12 @@ class GoalWrapperBase(object):
         raise NotImplementedError
 
     @abstractmethod
-    def goal_is_created(self):
+    def terminate_goal(self):
         """
-        Checks if a goal has been created
-
-        :return: whether a goal has been created or not
-        :rtype: bool
+        Terminates the created goal
         """
 
-        return self.__created_goal
+        raise NotImplementedError
 
 
 class RHBPGoalWrapper(GoalWrapperBase):
