@@ -559,9 +559,7 @@ class DelegationManager(object):
         """
 
         # Making sure that the delegation is in the right state
-        delegation.reset_proposals()
-        delegation.reset_steps()
-        delegation.state.set_waiting_for_proposal()
+        delegation.start_auction()
 
         auction_id = delegation.get_auction_id()
         goal_representation = delegation.get_goal_representation()
@@ -620,17 +618,12 @@ class DelegationManager(object):
                     auction_id))
 
                 try:
-                    # set contractor and change delegation state
-                    delegation.set_contractor(name=bidder_name)
+                    # set contractor, change delegation state and send goal
+                    delegation.make_contract(bidder_name=bidder_name, manager_name=manager_name)
                 except DelegationContractorError:
                     self.__logwarn("Contractor has already been chosen, while i am trying to find one")
                     up_for_delegation = False
                     break
-
-                # actually send the goal to the bidders Manager
-                try:
-                    rospy.loginfo("Trying to send the goal to the manager with the name " + str(manager_name))
-                    delegation.send_goal(name=manager_name)
                 except DelegationError as e:
                     self.__logwarn("Sending goal was not possible! (error_message:\"" + str(e.message) + "\")")
 

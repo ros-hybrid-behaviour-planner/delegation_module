@@ -38,6 +38,47 @@ class Delegation(object):
         del self.state
         del self.__goal_wrapper
 
+    def get_auction_id(self):
+        """
+        Gets the ID of this delegation and the corresponding auction
+
+        :return: the ID
+        """
+
+        return self.__auction_id
+
+    # Manipulating and checking auction steps
+
+    def decrement_and_check_steps(self):
+        """
+        Decrements current auction_steps and checks if the all steps are
+        finished
+
+        :return: Whether the auction has waited all steps or not
+        """
+
+        if self.__auction_steps > 0:
+            self.__auction_steps -= 1
+
+        return self.__auction_steps == 0
+
+    def end_auction_next_step(self):
+        """
+        Sets the auction_steps to 1 so that the auction will end in the next
+        call of DelegationManager.do_step()
+        """
+
+        self.__auction_steps = 1
+
+    def reset_steps(self):
+        """
+        Resets the current auction_steps to the defined max-value
+        """
+
+        self.__auction_steps = self.__auction_steps_max
+
+    # Proposals
+
     def add_proposal(self, proposal):
         """
         Adds a proposal to the sorted list of proposals of this delegation
@@ -62,51 +103,6 @@ class Delegation(object):
         """
 
         self.__proposals.remove(proposal)
-
-    def get_auction_id(self):
-        """
-        Gets the ID of this delegation and the corresponding auction
-
-        :return: the ID
-        """
-
-        return self.__auction_id
-
-    def decrement_and_check_steps(self):
-        """
-        Decrements current auction_steps and checks if the all steps are
-        finished
-
-        :return: Whether the auction has waited all steps or not
-        """
-
-        self.__auction_steps -= 1
-
-        return self.__auction_steps == 0
-
-    def end_auction_next_step(self):
-        """
-        Sets the auction_steps to 1 so that the auction will end in the next
-        call of DelegationManager.do_step()
-        """
-
-        self.__auction_steps = 1
-
-    def reset_steps(self):
-        """
-        Resets the current auction_steps to the defined max-value
-        """
-
-        self.__auction_steps = self.__auction_steps_max
-
-    def get_goal_representation(self):
-        """
-        Gets the Representation of the goal of this delegation
-
-        :return: the representation of the goal
-        """
-
-        return self.__goal_wrapper.get_goal_representation()
 
     def get_best_proposal(self):
         """
@@ -138,6 +134,8 @@ class Delegation(object):
         if len(self.__proposals) > 0:
             return True
         return False
+
+    # Forbidding and allowing bidders
 
     def forbid_bidder(self, name):
         """
@@ -176,6 +174,8 @@ class Delegation(object):
         if self.__forbidden_bidders.__contains__(name):
             self.__forbidden_bidders.remove(name)
 
+    # Contractor
+
     def set_contractor(self, name):
         """
         Sets contractor for this delegation,
@@ -205,15 +205,6 @@ class Delegation(object):
 
         return self.__contractor
 
-    def fail_current_delegation(self):
-        """
-        Fails current delegation, changes state back to waiting,
-        removes contractor
-        """
-
-        self.terminate_contract()
-        self.state.set_waiting_for_proposal()
-
     def remove_contractor(self):
         """
         Removes the contractor if set
@@ -221,6 +212,17 @@ class Delegation(object):
 
         self.__contractor = ""
         self.__got_contractor = False
+
+    # Goal
+
+    def get_goal_representation(self):
+        """
+        Gets the Representation of the goal of this delegation
+
+        :return: the representation of the goal
+        """
+
+        return self.__goal_wrapper.get_goal_representation()
 
     def get_goal_name(self):
         """
@@ -245,19 +247,67 @@ class Delegation(object):
 
         self.__goal_wrapper.send_goal(name=name)
 
+    def terminate_goal(self):
+        """
+        Terminates the goal by unregistering and deleting it
+        """
+
+        self.__goal_wrapper.terminate_goal()
+
+    # Contracting
+
+    def start_auction(self):
+        """
+        Notifies this delegation that the auction has started, resets old
+        proposals and auction_steps
+        """
+
+        self.state.set_waiting_for_proposal()
+        self.reset_steps()
+        self.reset_proposals()
+
+    def make_contract(self, bidder_name, manager_name):
+        """
+        Makes a contract by setting the bidder as contractor and sending the
+        goal to the manager
+
+        Bidder and manager can be the same or different
+
+        :param bidder_name: name of the bidder
+        :type bidder_name: str
+        :param manager_name: name of the manager
+        :type manager_name: str
+        :raises DelegationContractorError: if a contractor is already chosen
+        :raises DelegationError: if the goal could not be sent
+        """
+
+        self.set_contractor(name=bidder_name)
+        self.send_goal(name=manager_name)
+
     def terminate_contract(self):
         """
         Removes contractor and terminates goal
+
+        NO STATE CHANGE!
         """
 
         self.remove_contractor()
-        self.__goal_wrapper.terminate_goal()
+        self.terminate_goal()
 
     def finish_delegation(self):
 
         self.terminate_contract()
         self.reset_proposals()
         self.state.set_finished()
+
+    def fail_current_delegation(self):
+        """
+        Fails current delegation, changes state back to ready,
+        removes contractor
+        """
+
+        self.terminate_contract()
+        self.state.set_ready()
 
 
 class Proposal(object):

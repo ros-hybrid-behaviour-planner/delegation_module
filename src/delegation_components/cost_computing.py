@@ -1,5 +1,6 @@
 
 from delegation_errors import DelegationPlanningWarning
+from abc import ABCMeta, abstractmethod
 
 
 class AbstractCostEvaluator(object):
@@ -7,13 +8,15 @@ class AbstractCostEvaluator(object):
     Base Class for evaluators of cost functions for a DelegationManager
     """
 
+    __metaclass__ = ABCMeta
+
     def __init__(self):
         """
         Constructor, gives possibility and cost initial values
         """
 
-        self.__last_cost = -1
-        self.__last_possibility = False
+        self._last_cost = -1
+        self._last_possibility = False
 
     def get_cost(self):
         """
@@ -22,7 +25,7 @@ class AbstractCostEvaluator(object):
         :return: the last computed cost
         """
 
-        return self.__last_cost
+        return self._last_cost
 
     def get_possibility(self):
         """
@@ -32,8 +35,9 @@ class AbstractCostEvaluator(object):
                 task was possible
         """
 
-        return self.__last_possibility
+        return self._last_possibility
 
+    @abstractmethod
     def compute_cost_and_possibility(self, goal_representation):
         """
         Computes the cost and possibility of fulfilling a goal
@@ -62,7 +66,7 @@ class PDDLCostEvaluator(AbstractCostEvaluator):
         """
 
         super(PDDLCostEvaluator, self).__init__()
-        self.__planning_function = planning_function
+        self._planning_function = planning_function
 
     def compute_cost_and_possibility(self, goal_representation):
         """
@@ -78,14 +82,14 @@ class PDDLCostEvaluator(AbstractCostEvaluator):
         possible = False
         cost = -1
         try:
-            plan = self.__planning_function(goal_representation)
+            plan = self._planning_function(goal_representation)
             if plan and "cost" in plan and plan["cost"] != -1.0:
                 possible = True
                 cost = self.__compute_cost(plan=plan)
         except Exception as e:  # catch any exception
             raise DelegationPlanningWarning(str(e.message))
 
-        self.__last_cost, self.__last_possibility = cost, possible
+        self._last_cost, self._last_possibility = cost, possible
 
         return cost, possible
 
