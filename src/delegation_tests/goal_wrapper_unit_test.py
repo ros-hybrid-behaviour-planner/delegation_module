@@ -13,13 +13,14 @@ from delegation_components.goalwrapper import RHBPGoalWrapper
 
 class GoalWrapperTest(unittest.TestCase):
 
-    def __init__(self, *args, **kwargs):
-        super(GoalWrapperTest, self).__init__(*args, **kwargs)
+    @classmethod
+    def setUpClass(cls):
+        super(GoalWrapperTest, cls).setUpClass()
         rospy.init_node("test_node")
-        self.manager = Manager(prefix="Test_manager")
+        cls.manager = Manager(prefix="Test_manager")
         sensor = TopicSensor(name="test_sensor", topic="sensor_topic", message_type=Bool, initial_value=False)
-        self.test_condition = Condition(sensor, BooleanActivator())
-        self.comparison_goal = OfflineGoal(name="comparison_goal", planner_prefix="Test_manager")
+        cls.test_condition = Condition(sensor, BooleanActivator())
+        cls.comparison_goal = OfflineGoal(name="comparison_goal", planner_prefix="Test_manager")
 
     def test_basic_setter_getter(self):
         test_wrapper = RHBPGoalWrapper(name="test_goal", conditions=[self.test_condition])
@@ -31,7 +32,7 @@ class GoalWrapperTest(unittest.TestCase):
         try:
             test_wrapper.get_goal()
         except RuntimeError:
-            exception=True
+            exception = True
 
         self.assertTrue(exception)
 
@@ -44,7 +45,13 @@ class GoalWrapperTest(unittest.TestCase):
     def test_sending_goal(self):
         test_wrapper = RHBPGoalWrapper(name="test_goal", conditions=[self.test_condition])
 
+        print(test_wrapper.goal_is_created())
+
         test_wrapper.send_goal(name="Test_manager")
+
+        rospy.sleep(1)
+
+        print(test_wrapper.goal_is_created())
 
         self.assertTrue(test_wrapper.goal_is_created())
 
@@ -60,17 +67,25 @@ class GoalWrapperTest(unittest.TestCase):
         self.assertTrue(manager_has_goal)
 
     def test_terminating_goal(self):
-        test_wrapper = RHBPGoalWrapper(name="test_goal", conditions=[self.test_condition])
+        test_wrapper = RHBPGoalWrapper(name="terminate_goal", conditions=[self.test_condition])
 
         test_wrapper.send_goal(name="Test_manager")
 
+        rospy.sleep(1)
+
         test_wrapper.terminate_goal()
+
+        rospy.sleep(1)
 
         goals = self.manager.goals
 
         manager_has_goal = False
         for g in goals:
-            if g._name == "test_goal":
+            if g._name == "terminate_goal":
                 manager_has_goal = True
 
         self.assertFalse(manager_has_goal)
+
+
+if __name__ == '__main__':
+    unittest.main()

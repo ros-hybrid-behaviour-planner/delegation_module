@@ -20,17 +20,17 @@ class GoalWrapperBase(object):
         :type name: str
         """
 
-        self.__name = name
-        self.__created_goal = False
-        self.__goal = None
+        self._name = name
+        self._created_goal = False
+        self._goal = None
 
     def __del__(self):
         """
         Destructor
         """
 
-        if self.__created_goal:
-            del self.__goal
+        if self._created_goal:
+            del self._goal
 
     def get_goal_name(self):
         """
@@ -40,7 +40,7 @@ class GoalWrapperBase(object):
         :rtype: str
         """
 
-        return self.__name
+        return self._name
 
     def get_goal(self):
         """
@@ -50,10 +50,10 @@ class GoalWrapperBase(object):
         :raises RuntimeError: if no goal has been created yet
         """
 
-        if not self.__created_goal:
+        if not self._created_goal:
             raise RuntimeError("Trying to access a goal, while the goal has not been created")
         else:
-            return self.__goal
+            return self._goal
 
     def goal_is_created(self):
         """
@@ -63,7 +63,7 @@ class GoalWrapperBase(object):
         :rtype: bool
         """
 
-        return self.__created_goal
+        return self._created_goal
 
     @abstractmethod
     def get_goal_representation(self):
@@ -123,8 +123,8 @@ class RHBPGoalWrapper(GoalWrapperBase):
 
         super(RHBPGoalWrapper, self).__init__(name=name)
 
-        self.__conditions = conditions
-        self.__satisfaction_threshold = satisfaction_threshold
+        self._conditions = conditions
+        self._satisfaction_threshold = satisfaction_threshold
 
     def __del__(self):
         """
@@ -132,7 +132,7 @@ class RHBPGoalWrapper(GoalWrapperBase):
         """
 
         super(RHBPGoalWrapper, self).__del__()
-        del self.__conditions
+        del self._conditions
 
     def get_goal_representation(self):
         """
@@ -142,7 +142,7 @@ class RHBPGoalWrapper(GoalWrapperBase):
         :return: goal representing PDDL-String
         """
 
-        return " ".join([x.getPreconditionPDDL(self.__satisfaction_threshold).statement for x in self.__conditions])
+        return " ".join([x.getPreconditionPDDL(self._satisfaction_threshold).statement for x in self._conditions])
 
     def send_goal(self, name=""):
         """
@@ -154,11 +154,13 @@ class RHBPGoalWrapper(GoalWrapperBase):
         :raises DelegationError: if there is any problem with the goal creation
         """
         try:
-            self.__goal = GoalBase(name=self.get_goal_name(), plannerPrefix=name, conditions=self.__conditions, satisfaction_threshold=self.__satisfaction_threshold)
-            self.__created_goal = True
+            self._goal = GoalBase(name=self.get_goal_name(), plannerPrefix=name, conditions=self._conditions, satisfaction_threshold=self._satisfaction_threshold)
+            self._created_goal = True
+            print("creation done")
+            return
         except Exception as e:
-            self.__created_goal = False
-            self.__goal = None
+            self._created_goal = False
+            self._goal = None
             raise DelegationError("Sending goal raised exception: " + e.message)
 
     def terminate_goal(self):
@@ -167,6 +169,6 @@ class RHBPGoalWrapper(GoalWrapperBase):
         """
 
         if self.goal_is_created():
-            self.__created_goal = False
-            self.__goal.__del__()   # unregisters goal
-            self.__goal = None
+            self._created_goal = False
+            self._goal.__del__()   # unregisters goal
+            self._goal = None
