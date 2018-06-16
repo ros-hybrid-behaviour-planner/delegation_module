@@ -45,13 +45,9 @@ class GoalWrapperTest(unittest.TestCase):
     def test_sending_goal(self):
         test_wrapper = RHBPGoalWrapper(name="test_goal", conditions=[self.test_condition])
 
-        print(test_wrapper.goal_is_created())
-
         test_wrapper.send_goal(name="Test_manager")
 
         rospy.sleep(1)
-
-        print(test_wrapper.goal_is_created())
 
         self.assertTrue(test_wrapper.goal_is_created())
 

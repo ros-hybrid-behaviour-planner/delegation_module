@@ -18,7 +18,7 @@ class CostComputingTest(unittest.TestCase):
         rospy.init_node("TestNode1")
 
     def test_basic(self):
-        prefix = ""
+        prefix = "test_manager"
 
         m = Manager(prefix=prefix)
 
@@ -43,4 +43,5 @@ class CostComputingTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    # Run this only with the launch file or with a passive node running
     rostest.rosrun(PKG, 'CostComputingTest', CostComputingTest)

@@ -14,7 +14,7 @@ class AlwaysWinningCostEvaluator(AbstractCostEvaluator):
         super(AlwaysWinningCostEvaluator, self).__init__()
 
     def compute_cost_and_possibility(self, goal_representation):
-        self.__last_cost, self.__last_possibility = 0, True
+        self._last_cost, self._last_possibility = 0, True
         return 0, True
 
 

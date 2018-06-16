@@ -156,7 +156,6 @@ class RHBPGoalWrapper(GoalWrapperBase):
         try:
             self._goal = GoalBase(name=self.get_goal_name(), plannerPrefix=name, conditions=self._conditions, satisfaction_threshold=self._satisfaction_threshold)
             self._created_goal = True
-            print("creation done")
             return
         except Exception as e:
             self._created_goal = False

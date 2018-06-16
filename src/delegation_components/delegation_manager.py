@@ -9,6 +9,7 @@ from delegation_errors import DelegationServiceError, DelegationPlanningWarning,
 from delegation import Delegation, Proposal
 from task import Task
 from goalwrapper import GoalWrapperBase
+from behaviour_components.delegation_interface import DelegationInterfaceBase
 
 
 class DelegationManager(object):
@@ -52,9 +53,11 @@ class DelegationManager(object):
         self.__max_tasks = max_tasks
         self.__tasks = []
 
-        self.__cost_function_evaluator = None
         self.__cost_computable = False
+        self.__cost_function_evaluator = None
         self.__registered_manager = ""
+        self.__manager_interface = 0    # ID of the interface of the manager
+        self.__active_interfaces = []   # list of interface IDs
 
         self.__init_topics()
         self.__init_services()
@@ -88,6 +91,7 @@ class DelegationManager(object):
         self.__logwarn("Stopping services and topics")
         self.__stop_services()
         self.__stop_topics()
+        self.__unregister_at_interfaces()
 
         del self.__delegations[:]
 
@@ -107,6 +111,14 @@ class DelegationManager(object):
 
         self._cfp_publisher.unregister()
         self._cfp_subscriber.unregister()
+
+    def __unregister_at_interfaces(self):
+        """
+        Unregisters this DelegationManager at all interfaces he is used at
+        """
+
+        DelegationInterfaceBase.unregister_at(self.__active_interfaces)
+        del self.__active_interfaces[:]
 
     # ------ Logging Functions ------
 
@@ -434,7 +446,13 @@ class DelegationManager(object):
         else:
             raise DelegationError
 
-    def set_cost_function_evaluator(self, cost_function_evaluator, manager_name):
+    def add_interface(self, interface_id):
+        self.__active_interfaces.append(interface_id)
+
+    def remove_interface(self, interface_id):
+        self.__active_interfaces.remove(interface_id)
+
+    def set_cost_function_evaluator(self, cost_function_evaluator, manager_name, interface_id):
         """
         Adds a cost_function_evaluator, overwrites old evaluator if there is
         one and makes it possible for the delegation_manager to compute the cost
@@ -446,6 +464,7 @@ class DelegationManager(object):
         :type manager_name: str
         """
 
+        self.__manager_interface = interface_id
         self.__cost_function_evaluator = cost_function_evaluator
         self.__cost_computable = True
         self.__registered_manager = manager_name
@@ -724,12 +743,25 @@ class DelegationManager(object):
 
         return new.get_auction_id()
 
-    def do_step(self):
+    def do_step(self, interface_id):
         """
-        Does a step, meaning all delegations that are currently waiting
+        First checks if this interface is allowed to invoke steps and then
+        does a step, meaning all delegations that are currently waiting
         for proposals are checked if their auction should end and those
         auctions are terminated
+
+        :param interface_id: ID of the invoking interface
+        :type interface_id: int
         """
+
+        if self.__cost_computable:
+            # does a step only for the registered manager
+            if self.__manager_interface != interface_id:
+                return
+        else:
+            # does a step only for one of the interfaces
+            if self.__active_interfaces[0] != interface_id:
+                return
 
         self.__loginfo("Doing a step")
 
