@@ -58,6 +58,7 @@ class DelegationManager(object):
         self.__registered_manager = ""
         self.__manager_interface = 0    # ID of the interface of the manager
         self.__active_interfaces = []   # list of interface IDs
+        self.__inactive_interfaces = []
 
         self.__init_topics()
         self.__init_services()
@@ -117,8 +118,9 @@ class DelegationManager(object):
         Unregisters this DelegationManager at all interfaces he is used at
         """
 
-        DelegationInterfaceBase.unregister_at(self.__active_interfaces)
+        DelegationInterfaceBase.unregister_at(self.__active_interfaces.extend(self.__inactive_interfaces))
         del self.__active_interfaces[:]
+        del self.__inactive_interfaces[:]
 
     # ------ Logging Functions ------
 
@@ -450,7 +452,29 @@ class DelegationManager(object):
         self.__active_interfaces.append(interface_id)
 
     def remove_interface(self, interface_id):
-        self.__active_interfaces.remove(interface_id)
+        if self.__active_interfaces.__contains__(interface_id):
+            self.__active_interfaces.remove(interface_id)
+
+        if self.__inactive_interfaces.__contains__(interface_id):
+            self.__inactive_interfaces.remove(interface_id)
+
+    def activate_interface(self, interface_id):
+        if self.__inactive_interfaces.__contains__(interface_id):
+            self.__inactive_interfaces.remove(interface_id)
+            self.__active_interfaces.append(interface_id)
+        elif self.__active_interfaces.__contains__(interface_id):
+            pass
+        else:
+            self.__logwarn("Trying to activate interface with ID " + str(interface_id) + " while it is not registered")
+
+    def deactivate_interface(self, interface_id):
+        if self.__active_interfaces.__contains__(interface_id):
+            self.__active_interfaces.remove(interface_id)
+            self.__inactive_interfaces.append(interface_id)
+        elif self.__inactive_interfaces.__contains__(interface_id):
+            pass
+        else:
+            self.__logwarn("Trying to deactivate interface with ID " + str(interface_id) + " while it is not registered")
 
     def set_cost_function_evaluator(self, cost_function_evaluator, manager_name, interface_id):
         """
