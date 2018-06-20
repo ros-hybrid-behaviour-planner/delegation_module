@@ -34,7 +34,7 @@ class DelegationManagerTest(unittest.TestCase):
     def test_setter_getter(self):
         uut = self.new_uut()
 
-        self.assertEqual(uut.get_name(),self.uut_name)
+        self.assertEqual(uut.get_name(), self.uut_name)
         curr_id = uut.get_new_auction_id()
         self.assertEqual(uut.get_new_auction_id(), curr_id + 1)
 
@@ -263,6 +263,7 @@ class DelegationManagerTest(unittest.TestCase):
 
         # cost not computable
         uut = self.new_uut()
+        uut.check_possible_tasks()
         response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name)
         self.assertFalse(response.acceptance)
         self.assertFalse(response.still_biding)
@@ -332,16 +333,3 @@ class DelegationManagerTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
-
-
-
-
-
-
-
-
-
-
-
-

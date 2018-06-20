@@ -51,7 +51,10 @@ class MockedDelegationCommunicator(object):
         self._service_prefix = manager_name + '/'
         self._cfp_publisher = rospy.Publisher(name=DelegationManager.cfp_topic_name, data_class=CFP, queue_size=10)
         self._cfp_subscriber = rospy.Subscriber(name=DelegationManager.cfp_topic_name, data_class=CFP, callback=self.__cfp_callback)
-        self.start_communication()
+        self._precom_service = rospy.Service(name=self._name + DelegationManager.precom_suffix, service_class=Precommit, handler=self.__precom_callback)
+        self._propose_service = rospy.Service(name=self._name + DelegationManager.propose_suffix, service_class=Propose, handler=self.__propose_callback)
+        self._failure_service = rospy.Service(name=self._name + DelegationManager.failure_suffix, service_class=Failure, handler=self.__failure_callback)
+        self._addGoalService = rospy.Service(self._service_prefix + 'AddGoal', AddGoal, self.__add_goal_callback)
         # Precom
         self.PAcceptance = False
         self.PBidding = False
@@ -217,6 +220,3 @@ if __name__ == '__main__':
     passive_manager = MockedDelegationCommunicator(name="MockedCommunicator", manager_name="MockedManager")
 
     rospy.spin()
-
-
-
