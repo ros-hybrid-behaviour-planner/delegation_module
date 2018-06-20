@@ -300,7 +300,10 @@ class DelegationManager(object):
 
         self.__loginfo("Got CFP from " + str(auctioneer_name) + " with ID " + str(auction_id))
 
-        # TODO should i bid this way for my OWN auctions? No!
+        if auctioneer_name == self._name:
+            # Do not bid this way for own auctions!
+            # Give information about own capabilities at auction start
+            return
 
         if not self.check_possible_tasks():
             # not bidding if i cannot take tasks right now or in general
