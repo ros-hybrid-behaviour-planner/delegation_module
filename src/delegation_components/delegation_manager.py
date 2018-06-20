@@ -9,7 +9,6 @@ from delegation_errors import DelegationServiceError, DelegationPlanningWarning,
 from delegation import Delegation, Proposal
 from task import Task
 from goalwrapper import GoalWrapperBase
-from behaviour_components.delegation_interface import DelegationInterfaceBase
 
 
 class DelegationManager(object):
@@ -119,7 +118,7 @@ class DelegationManager(object):
         Unregisters this DelegationManager at all interfaces he is used at
         """
 
-        # DelegationInterfaceBase.unregister_at(self.__active_interfaces.extend(self.__inactive_interfaces))
+        # DelegationClient.unregister_at(self.__active_interfaces.extend(self.__inactive_interfaces))
         del self.__active_interfaces[:]
         del self.__inactive_interfaces[:]
 
