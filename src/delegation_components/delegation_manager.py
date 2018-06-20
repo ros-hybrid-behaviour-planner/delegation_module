@@ -454,6 +454,8 @@ class DelegationManager(object):
         self.__active_client_ids.append(client_id)
 
     def remove_client(self, client_id):
+        if self.__active_client_ids.__contains__(client_id):
+            self.__active_client_ids.remove(client_id)
 
     def set_cost_function_evaluator(self, cost_function_evaluator, manager_name, client_id):
         """
@@ -723,6 +725,7 @@ class DelegationManager(object):
         try:
             self.__send_failure(auctioneer_name=task.get_auctioneer_name(), auction_id=task.get_auction_id())
         except DelegationServiceError as e:
+            self.__logwarn("Failure Message raised following error: "+e.message+"\nWill try again")
             # TODO we would have to retry
             pass
 
@@ -795,50 +798,6 @@ class DelegationManager(object):
     @property
     def cost_computable(self):
         return self.__cost_computable
-
-
-class DelegationManagerSingleton(object):
-    """
-    Class that is a singleton container for the DelegationManager
-
-    Initiate this class and use get_instance() and use that instance as a normal
-    instance of the DelegationManager
-    """
-
-    __instance = None
-
-    def __init__(self, manager_name="", max_tasks=0):
-        """
-        Constructor of the DelegationManagerSingleton
-
-        Constructs a new instance of the DelegationManager if no instance has
-        been created in this process
-
-        This should be used first in the manager of process with the managers
-        name, if a manager is used in this process/node
-
-        :param manager_name: name of instance the DelegationManager, should be
-                unique and the name of the normal manager if this
-                DelegationManager can take tasks
-        """
-
-        if DelegationManagerSingleton.__instance is None:
-            DelegationManagerSingleton.__instance = DelegationManager(instance_name=manager_name, max_tasks=max_tasks)
-        else:
-            # TODO myb change DelegationManager if formerly taking_tasks was false and this one is true
-            rospy.loginfo("There is already an instance of the DelegationManager in this process")
-
-    def get_instance(self):
-        """
-        Returns the instance of the DelegationManager if apparent
-
-        :return: the instance of the DelegationManager class
-        :raises RuntimeError: if no instance has been found
-        """
-
-        if DelegationManagerSingleton.__instance is None:
-            raise RuntimeError("No instance has been found")
-        return DelegationManagerSingleton.__instance
 
 
 if __name__ == '__main__':
