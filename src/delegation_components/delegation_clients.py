@@ -77,26 +77,16 @@ class DelegationClient(object):
 
         self._delegation_manager = delegation_manager
         self._active_manager = True
-        delegation_manager.add_client(interface_id=self._client_id)
+        delegation_manager.add_client(client_id=self._client_id)
 
     def unregister(self):
         """
         Unregisters currently used DelegationManager from this client
         """
 
-        self._delegation_manager.remove_interface(interface_id=self._client_id)
+        self._delegation_manager.remove_client(client_id=self._client_id)
         self._active_manager = False
         self._delegation_manager = None
-
-    def activate(self):
-
-        if self._active_manager:
-            self._delegation_manager.activate_interface(interface_id=self._client_id)
-
-    def deactivate(self):
-
-        if self._active_manager:
-            self._delegation_manager.deactivate_interface(interface_id=self._client_id)
 
     def check_if_registered(self):
         """
