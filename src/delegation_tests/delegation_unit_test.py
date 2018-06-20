@@ -2,26 +2,14 @@ import unittest
 
 from delegation_components.delegation import Delegation, Proposal
 from delegation_components.delegation_errors import DelegationContractorError
-from delegation_components.goalwrapper import GoalWrapperBase
-
-
-class TestGoalWrapper(GoalWrapperBase):
-
-    def get_goal_representation(self):
-        return self.get_goal_name()
-
-    def send_goal(self, name):
-        self._created_goal = True
-
-    def terminate_goal(self):
-        self._created_goal = False
+from delegation_tests.test_utils import MockedGoalWrapper
 
 
 class DelegationTest(unittest.TestCase):
 
     def setUp(self):
         self.goal_name = "test_goal"
-        self.wrapper = TestGoalWrapper(name=self.goal_name)
+        self.wrapper = MockedGoalWrapper(name=self.goal_name)
 
     def test_contractors(self):
         delegation = Delegation(goal_wrapper=self.wrapper, auction_id=1)

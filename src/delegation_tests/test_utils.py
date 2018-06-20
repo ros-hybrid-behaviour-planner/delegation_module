@@ -11,25 +11,30 @@ from delegation_components.cost_computing import AbstractCostEvaluator
 from delegation_components.goalwrapper import GoalWrapperBase
 
 
-class AlwaysWinningCostEvaluator(AbstractCostEvaluator):
+class MockedCostEvaluator(AbstractCostEvaluator):
 
-    def __init__(self):
-        super(AlwaysWinningCostEvaluator, self).__init__()
+    def __init__(self, cost, possibility):
+        super(MockedCostEvaluator, self).__init__()
+        self._last_cost = cost
+        self._last_possibility = possibility
 
     def compute_cost_and_possibility(self, goal_representation):
-        self._last_cost, self._last_possibility = 0, True
-        return 0, True
+
+        return self._last_cost, self._last_possibility
 
 
-class MockingGoalWrapper(GoalWrapperBase):
+class MockedGoalWrapper(GoalWrapperBase):
 
     def __init__(self, name):
-        super(MockingGoalWrapper, self).__init__(name=name)
+        super(MockedGoalWrapper, self).__init__(name=name)
         self._manager_name = ""
 
     def send_goal(self, name):
         self._manager_name = name
         self._created_goal = True
+
+    def get_manager(self):
+        return self._manager_name
 
     def terminate_goal(self):
         self._created_goal = False
@@ -38,7 +43,7 @@ class MockingGoalWrapper(GoalWrapperBase):
         return self._name
 
 
-class DelegationMockingNode(object):
+class MockedDelegationCommunicator(object):
 
     def __init__(self, name, manager_name):
         self._name = name
@@ -46,10 +51,7 @@ class DelegationMockingNode(object):
         self._service_prefix = manager_name + '/'
         self._cfp_publisher = rospy.Publisher(name=DelegationManager.cfp_topic_name, data_class=CFP, queue_size=10)
         self._cfp_subscriber = rospy.Subscriber(name=DelegationManager.cfp_topic_name, data_class=CFP, callback=self.__cfp_callback)
-        self._precom_service = rospy.Service(name=self._name + DelegationManager.precom_suffix, service_class=Precommit, handler=self.__precom_callback)
-        self._propose_service = rospy.Service(name=self._name + DelegationManager.propose_suffix, service_class=Propose, handler=self.__propose_callback)
-        self._failure_service = rospy.Service(name=self._name + DelegationManager.failure_suffix, service_class=Failure, handler=self.__failure_callback)
-        self._addGoalService = rospy.Service(self._service_prefix + 'AddGoal', AddGoal, self.__add_goal_callback)
+        self.start_communication()
         # Precom
         self.PAcceptance = False
         self.PBidding = False
@@ -69,7 +71,31 @@ class DelegationMockingNode(object):
         self.AddG_last = None
         self.got_addg = False
 
+    def start_communication(self):
+        self._precom_service = rospy.Service(name=self._name + DelegationManager.precom_suffix, service_class=Precommit, handler=self.__precom_callback)
+        self._propose_service = rospy.Service(name=self._name + DelegationManager.propose_suffix, service_class=Propose, handler=self.__propose_callback)
+        self._failure_service = rospy.Service(name=self._name + DelegationManager.failure_suffix, service_class=Failure, handler=self.__failure_callback)
+        self._addGoalService = rospy.Service(self._service_prefix + 'AddGoal', AddGoal, self.__add_goal_callback)
+
+    def __del__(self):
+        """
+        Destructor for the DelegationManager
+        """
+
+        self.stop_communication()
+        self._cfp_publisher.unregister()
+        self._cfp_subscriber.unregister()
+
+    def stop_communication(self):
+
+        self._precom_service.shutdown()
+        self._propose_service.shutdown()
+        self._failure_service.shutdown()
+        self._addGoalService.shutdown()
+
     def __precom_callback(self, request):
+
+        print("Got Precom Request")
 
         self.Pre_last = request
         self.got_pre = True
@@ -85,6 +111,8 @@ class DelegationMockingNode(object):
 
     def __propose_callback(self, request):
 
+        print("Got Propose Request")
+
         self.Pro_last = request
         self.got_pro = True
 
@@ -92,17 +120,23 @@ class DelegationMockingNode(object):
 
     def __failure_callback(self, request):
 
+        print("Got Failure Request")
+
         self.Fail_last = request
         self.got_fail = True
 
-        return FailureResponse
+        return FailureResponse()
 
     def __cfp_callback(self, msg):
+
+        print("Got CFP")
 
         self.CFP_last = msg
         self.got_cfp = True
 
     def __add_goal_callback(self, request):
+
+        print("Got AddGoal request")
 
         self.AddG_last = request
         self.got_addg = True
@@ -178,9 +212,9 @@ if __name__ == '__main__':
 
     rospy.init_node(name="PassiveNode")
 
-    rospy.loginfo("Starting a passive node with the basic scenario")
+    rospy.loginfo("Starting a completely passive node that can answer DelegationServiceRequests, but wont actually do anything")
 
-    passive_manager = DelegationMockingNode(name="passive_delegation", manager_name="passive_manager")
+    passive_manager = MockedDelegationCommunicator(name="MockedCommunicator", manager_name="MockedManager")
 
     rospy.spin()
 

@@ -56,6 +56,7 @@ class DelegationManager(object):
         self.__cost_computable = False
         self.__cost_function_evaluator = None
         self.__registered_manager = ""
+        self.__currentStepCounter = -1
         self.__manager_interface = 0    # ID of the interface of the manager
         self.__active_interfaces = []   # list of interface IDs
         self.__inactive_interfaces = []
@@ -118,7 +119,7 @@ class DelegationManager(object):
         Unregisters this DelegationManager at all interfaces he is used at
         """
 
-        DelegationInterfaceBase.unregister_at(self.__active_interfaces.extend(self.__inactive_interfaces))
+        # DelegationInterfaceBase.unregister_at(self.__active_interfaces.extend(self.__inactive_interfaces))
         del self.__active_interfaces[:]
         del self.__inactive_interfaces[:]
 
@@ -176,12 +177,12 @@ class DelegationManager(object):
         if not self.check_possible_tasks():
             # not bidding if no new task possible right now or in general
             self.__loginfo("Wont bid, because i already have enough tasks or cannot take any")
-            return
+            return response
 
         if not self.__cost_computable:
             # no cost computation available
             self.__loginfo("Wont bid, because i cannot compute the cost")
-            return
+            return response
 
         try:
             new_cost, possible_goal = self.__cost_function_evaluator.compute_cost_and_possibility(goal_representation=goal_representation)
@@ -392,7 +393,7 @@ class DelegationManager(object):
 
         :param auctioneer_name: name of the auctioneer of the failed task
         :param auction_id: ID of the failed task
-        :raises ServiceException: if call failed
+        :raises DelegationServiceError: if call failed
         """
 
         self.__loginfo("Sending a Failure message to " + str(auctioneer_name) + " for his auction " + str(auction_id))
@@ -684,6 +685,9 @@ class DelegationManager(object):
                 self.__loginfo(str(bidder_name) + " has given a new proposal of " + str(response.new_proposal) + " for my auction " + str(
                     auction_id))
                 delegation.remove_proposal(proposal=best_proposal)
+                if best_proposal.get_value() >= response.new_proposal:
+                    self.__logwarn("The new proposal is not worse than the old proposal while he is not accepting the old proposal, something is off!\nWont add this new proposal to be safed")
+                    continue
                 try:
                     delegation.add_proposal(proposal=Proposal(bidder_name, response.new_proposal))
                 except Warning:
@@ -732,7 +736,7 @@ class DelegationManager(object):
         try:
             task = self.get_task_by_goal_name(goal_name=goal_name)
         except LookupError:
-            # this goal was not given by a different manager
+            # this goal was not given by a different manager as task, do nothing
             return
 
         # send a failure right, if needed
@@ -767,25 +771,20 @@ class DelegationManager(object):
 
         return new.get_auction_id()
 
-    def do_step(self, interface_id):
+    def do_step(self, current_step):
         """
-        First checks if this interface is allowed to invoke steps and then
+        Checks if step has already been performed and then
         does a step, meaning all delegations that are currently waiting
         for proposals are checked if their auction should end and those
         auctions are terminated
 
-        :param interface_id: ID of the invoking interface
-        :type interface_id: int
+        :param current_step: number of the step that has to be done
+        :type current_step: int
         """
 
-        if self.__cost_computable:
-            # does a step only for the registered manager
-            if self.__manager_interface != interface_id:
-                return
-        else:
-            # does a step only for one of the interfaces
-            if self.__active_interfaces[0] != interface_id:
-                return
+        if current_step <= self.__currentStepCounter:
+            # step has already been performed
+            return
 
         self.__loginfo("Doing a step")
 
@@ -812,6 +811,10 @@ class DelegationManager(object):
         except LookupError:
             # this goal was no task given by a different manager
             return
+
+    @property
+    def cost_computable(self):
+        return self.__cost_computable
 
 
 class DelegationManagerSingleton(object):
