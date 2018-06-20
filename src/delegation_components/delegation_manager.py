@@ -9,6 +9,7 @@ from delegation_errors import DelegationServiceError, DelegationPlanningWarning,
 from delegation import Delegation, Proposal
 from task import Task
 from goalwrapper import GoalWrapperBase
+from delegation_clients import DelegationClient
 
 
 class DelegationManager(object):
@@ -56,9 +57,8 @@ class DelegationManager(object):
         self.__cost_function_evaluator = None
         self.__registered_manager = ""
         self.__currentStepCounter = -1
-        self.__manager_interface = 0    # ID of the interface of the manager
-        self.__active_interfaces = []   # list of interface IDs
-        self.__inactive_interfaces = []
+        self.__manager_client_id = 0    # ID of the client of the manager
+        self.__active_client_ids = []   # list of client IDs
 
         self.__init_topics()
         self.__init_services()
@@ -92,7 +92,7 @@ class DelegationManager(object):
         self.__logwarn("Stopping services and topics")
         self.__stop_services()
         self.__stop_topics()
-        self.__unregister_at_interfaces()
+        self.__unregister_at_clients()
 
         del self.__delegations[:]
 
@@ -113,14 +113,13 @@ class DelegationManager(object):
         self._cfp_publisher.unregister()
         self._cfp_subscriber.unregister()
 
-    def __unregister_at_interfaces(self):
+    def __unregister_at_clients(self):
         """
-        Unregisters this DelegationManager at all interfaces he is used at
+        Unregisters this DelegationManager at all clients he is registered at
         """
 
-        # DelegationClient.unregister_at(self.__active_interfaces.extend(self.__inactive_interfaces))
-        del self.__active_interfaces[:]
-        del self.__inactive_interfaces[:]
+        DelegationClient.unregister_at(self.__active_client_ids)
+        del self.__active_client_ids[:]
 
     # ------ Logging Functions ------
 
@@ -451,35 +450,12 @@ class DelegationManager(object):
         else:
             raise DelegationError
 
-    def add_interface(self, interface_id):
-        self.__active_interfaces.append(interface_id)
+    def add_client(self, client_id):
+        self.__active_client_ids.append(client_id)
 
-    def remove_interface(self, interface_id):
-        if self.__active_interfaces.__contains__(interface_id):
-            self.__active_interfaces.remove(interface_id)
+    def remove_client(self, client_id):
 
-        if self.__inactive_interfaces.__contains__(interface_id):
-            self.__inactive_interfaces.remove(interface_id)
-
-    def activate_interface(self, interface_id):
-        if self.__inactive_interfaces.__contains__(interface_id):
-            self.__inactive_interfaces.remove(interface_id)
-            self.__active_interfaces.append(interface_id)
-        elif self.__active_interfaces.__contains__(interface_id):
-            pass
-        else:
-            self.__logwarn("Trying to activate interface with ID " + str(interface_id) + " while it is not registered")
-
-    def deactivate_interface(self, interface_id):
-        if self.__active_interfaces.__contains__(interface_id):
-            self.__active_interfaces.remove(interface_id)
-            self.__inactive_interfaces.append(interface_id)
-        elif self.__inactive_interfaces.__contains__(interface_id):
-            pass
-        else:
-            self.__logwarn("Trying to deactivate interface with ID " + str(interface_id) + " while it is not registered")
-
-    def set_cost_function_evaluator(self, cost_function_evaluator, manager_name, interface_id):
+    def set_cost_function_evaluator(self, cost_function_evaluator, manager_name, client_id):
         """
         Adds a cost_function_evaluator, overwrites old evaluator if there is
         one and makes it possible for the delegation_manager to compute the cost
@@ -489,9 +465,11 @@ class DelegationManager(object):
         :type cost_function_evaluator: AbstractCostEvaluator
         :param manager_name: name of the manager the evaluator is from
         :type manager_name: str
+        :param client_id: ID of the client at this manager
+        :type client_id: int
         """
 
-        self.__manager_interface = interface_id
+        self.__manager_client_id = client_id
         self.__cost_function_evaluator = cost_function_evaluator
         self.__cost_computable = True
         self.__registered_manager = manager_name

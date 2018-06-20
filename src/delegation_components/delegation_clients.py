@@ -77,7 +77,7 @@ class DelegationClient(object):
 
         self._delegation_manager = delegation_manager
         self._active_manager = True
-        delegation_manager.add_interface(interface_id=self._client_id)
+        delegation_manager.add_client(interface_id=self._client_id)
 
     def unregister(self):
         """
@@ -202,7 +202,7 @@ class ManagerDelegationClient(DelegationClient):
         super(ManagerDelegationClient, self).register(delegation_manager=delegation_manager)
 
         if add_own_cost_evaluator:
-            delegation_manager.set_cost_function_evaluator(cost_function_evaluator=self.get_new_cost_evaluator(), manager_name=self.__behaviour_manager._prefix, interface_id=self._client_id)
+            delegation_manager.set_cost_function_evaluator(cost_function_evaluator=self.get_new_cost_evaluator(), manager_name=self.__behaviour_manager._prefix, client_id=self._client_id)
 
     def notify_goal_removal(self, goal_name):
         """
