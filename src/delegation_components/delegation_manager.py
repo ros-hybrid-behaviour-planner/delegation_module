@@ -297,12 +297,12 @@ class DelegationManager(object):
         auction_id = msg.auction_id
         goal_representation = msg.goal_representation
 
-        self.__loginfo("Got CFP from " + str(auctioneer_name) + " with ID " + str(auction_id))
-
         if auctioneer_name == self._name:
             # Do not bid this way for own auctions!
             # Give information about own capabilities at auction start
             return
+
+        self.__loginfo("Got CFP from " + str(auctioneer_name) + " with ID " + str(auction_id))
 
         if not self.check_possible_tasks():
             # not bidding if i cannot take tasks right now or in general
@@ -610,7 +610,7 @@ class DelegationManager(object):
         """
 
         auction_id = delegation.get_auction_id()
-        self.__loginfo("Trying to end Auction with ID " + str(auction_id))
+        self.__loginfo("Trying to end auction with ID " + str(auction_id))
 
         up_for_delegation = True
 
@@ -619,11 +619,16 @@ class DelegationManager(object):
             try:
                 best_proposal = delegation.get_best_proposal()
             except LookupError:
-                self.__logwarn("Delegation with auction id " + str(auction_id) + " has no proposals")
+                self.__logwarn("Auction with ID " + str(auction_id) + " has no proposals")
                 break
 
             bidder_name = best_proposal.get_name()
             proposed_value = best_proposal.get_value()
+
+            if bidder_name == self._name:
+                self.__loginfo("I won my own auction with the ID " + str(auction_id))
+                # TODO make sure i do the work myself
+                return
 
             self.__loginfo("Sending a precommit to " + str(bidder_name) + " who bid " + str(
                 proposed_value) + " for my auction " + str(
@@ -729,10 +734,10 @@ class DelegationManager(object):
             # TODO we would have to retry
             pass
 
-    def delegate(self, goal_wrapper, auction_steps=3):
+    def delegate(self, goal_wrapper, auction_steps=3, own_cost=-1):
         """
         Makes a delegation for the goal and starts an auction for this
-        delegation
+        delegation. Adds my own cost as a proposal if wanted.
 
         The auction will be closed after the given number of steps were taken,
         a winner will be determined and the goal will be delegated to that
@@ -743,11 +748,18 @@ class DelegationManager(object):
         :type auction_steps: int
         :param goal_wrapper: wrapper for the goal that should be delegated
         :type goal_wrapper: GoalWrapperBase
+        :param own_cost: cost if i have to achieve the goal myself, less than 1
+                if not achievable for me
+        :type own_cost: int
         :return: the auction_id of the auction
         :rtype: int
         """
 
         new = Delegation(goal_wrapper=goal_wrapper, auction_id=self.get_new_auction_id(), auction_steps=auction_steps)
+
+        if own_cost > 0:
+            proposal = Proposal(name=self._name, value=own_cost)
+            new.add_proposal(proposal=proposal)
 
         self.__delegations.append(new)
         self.__start_auction(delegation=new)

@@ -59,6 +59,9 @@ class DelegationClient(object):
         self._client_id = DelegationClient.instance_counter
         DelegationClient.all_clients_and_ids[self._client_id] = self
 
+    def __del__(self):
+        self.unregister()
+
     def register(self, delegation_manager):
         """
         Registers a delegation manager at this client if there was none
@@ -84,9 +87,10 @@ class DelegationClient(object):
         Unregisters currently used DelegationManager from this client
         """
 
-        self._delegation_manager.remove_client(client_id=self._client_id)
-        self._active_manager = False
-        self._delegation_manager = None
+        if self._active_manager:
+            self._delegation_manager.remove_client(client_id=self._client_id)
+            self._active_manager = False
+            self._delegation_manager = None
 
     def check_if_registered(self):
         """
