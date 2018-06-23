@@ -29,7 +29,7 @@ class DelegationManagerTest1(unittest.TestCase):
 
         scenarioRobot = BasicCookingRobot(planner_prefix=prefix)
 
-        interface = manager.get_delegation_interface()
+        interface = manager.get_delegation_client()
 
         interface.register(delegation_manager=delegation_manager)
 
