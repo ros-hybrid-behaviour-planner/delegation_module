@@ -184,6 +184,11 @@ class DelegationManager(object):
 
         try:
             new_cost, possible_goal = self.__cost_function_evaluator.compute_cost_and_possibility(goal_representation=goal_representation)
+            if possible_goal:
+                s = "possible with a cost of " + str(new_cost)
+            else:
+                s = "impossible"
+            self.__loginfo("Task is " + s)
         except DelegationPlanningWarning as e:
             self.__loginfo("Goal not possible. PlannerMessage: " + str(e.message))
             new_cost, possible_goal = -1, False
@@ -316,6 +321,11 @@ class DelegationManager(object):
 
         try:
             cost, possible_goal = self.__cost_function_evaluator.compute_cost_and_possibility(goal_representation=goal_representation)
+            if possible_goal:
+                s = "possible with a cost of " + str(cost)
+            else:
+                s = "impossible"
+            self.__loginfo("Task is " + s)
         except DelegationPlanningWarning as e:
             self.__loginfo("Goal not possible. PlannerMessage: " + str(e.message))
             cost, possible_goal = -1, False
