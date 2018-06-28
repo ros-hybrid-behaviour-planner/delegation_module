@@ -776,24 +776,18 @@ class DelegationManager(object):
 
         return new.get_auction_id()
 
-    def do_step(self, current_step):
+    def do_step(self, delegation_ids):
         """
-        Checks if step has already been performed and then
-        does a step, meaning all delegations that are currently waiting
-        for proposals are checked if their auction should end and those
-        auctions are terminated
+        Performs a step for all delegations with a given Id
 
-        :param current_step: number of the step that has to be done
-        :type current_step: int
+        :param delegation_ids: list of IDs of delegations that should be stepped
+        :type delegation_ids: list
         """
 
-        if current_step <= self.__currentStepCounter:
-            # step has already been performed
-            return
+        self.__loginfo("Doing a step for auctions: "+", ".join(delegation_ids.__repr__()))
 
-        self.__loginfo("Doing a step")
-
-        waiting_delegations = [d for d in self.__delegations if d.state.is_waiting_for_proposals()]
+        delegations = [self.get_delegation(auction_id=i) for i in delegation_ids]
+        waiting_delegations = [d for d in delegations if d.state.is_waiting_for_proposals()]
 
         for delegation in waiting_delegations:
             # decrementing the needed steps and checking at the same time

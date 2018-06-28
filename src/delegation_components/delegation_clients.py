@@ -103,14 +103,14 @@ class DelegationClient(object):
 
         return self._active_manager
 
-    def do_step(self, current_step):
+    def do_step(self):
         """
         If a delegation manager is registered, it will make a step, if it has
         not done this step already
         """
 
         if self._active_manager:
-            self._delegation_manager.do_step(current_step=current_step)
+            self._delegation_manager.do_step(delegation_ids=self._active_delegations)
 
     def delegate(self, name, conditions, satisfaction_threshold):
         """

@@ -152,7 +152,6 @@ class DelegationManagerTest(unittest.TestCase):
         goal_name = "test_goal"
         test_goal = MockedGoalWrapper(name=goal_name)
         steps = 3
-        current_step = 0
         proposed_value = 2
 
         # No proposals
@@ -161,12 +160,10 @@ class DelegationManagerTest(unittest.TestCase):
         rospy.sleep(1)
         self.mocked_DM.reset_messages()
         for i in range(steps-1):
-            current_step += 1
-            uut.do_step(current_step=current_step)
+            uut.do_step(delegation_ids=[auction_id])
             rospy.sleep(1)
             self.assertFalse(self.mocked_DM.got_cfp)
-        current_step += 1
-        uut.do_step(current_step=current_step)
+        uut.do_step(delegation_ids=[auction_id])
         rospy.sleep(1)
         self.assertTrue(self.mocked_DM.got_cfp)
         self.assertEqual(self.mocked_DM.CFP_last.auction_id, auction_id)
@@ -179,8 +176,7 @@ class DelegationManagerTest(unittest.TestCase):
         self.mocked_DM.reset_messages()
         self.mocked_DM.set_precom_response(acceptance=False, still_bidding=False, cost=proposed_value)
         for i in range(steps):
-            current_step += 1
-            uut.do_step(current_step=current_step)
+            uut.do_step(delegation_ids=[auction_id])
             rospy.sleep(1)
         self.assertTrue(self.mocked_DM.got_pre)
         self.assertTrue(self.mocked_DM.got_cfp)
@@ -194,8 +190,7 @@ class DelegationManagerTest(unittest.TestCase):
         proposed_value += 1
         self.mocked_DM.set_precom_response(acceptance=False, still_bidding=True, cost=proposed_value)
         for i in range(steps):
-            current_step += 1
-            uut.do_step(current_step=current_step)
+            uut.do_step(delegation_ids=[auction_id])
             rospy.sleep(1)
         self.assertTrue(self.mocked_DM.got_pre)
         self.assertTrue(self.mocked_DM.got_cfp)
@@ -208,8 +203,7 @@ class DelegationManagerTest(unittest.TestCase):
         self.mocked_DM.reset_messages()
         self.mocked_DM.stop_communication()
         for i in range(steps):
-            current_step += 1
-            uut.do_step(current_step=current_step)
+            uut.do_step(delegation_ids=[auction_id])
             rospy.sleep(1)
         self.assertTrue(self.mocked_DM.got_cfp)
         uut.terminate(auction_id=auction_id)
@@ -222,8 +216,7 @@ class DelegationManagerTest(unittest.TestCase):
         self.mocked_DM.reset_messages()
         self.mocked_DM.set_precom_response(acceptance=True, still_bidding=True, cost=proposed_value)
         for i in range(steps):
-            current_step += 1
-            uut.do_step(current_step=current_step)
+            uut.do_step(delegation_ids=[auction_id])
             rospy.sleep(1)
         self.assertTrue(self.mocked_DM.got_pre)
         self.assertTrue(test_goal.goal_is_created())
@@ -234,7 +227,6 @@ class DelegationManagerTest(unittest.TestCase):
         goal_name = "test_goal"
         test_goal = MockedGoalWrapper(name=goal_name)
         steps = 3
-        current_step = 0
         proposed_value = 2
 
         # proposal and accepted precom
@@ -244,8 +236,7 @@ class DelegationManagerTest(unittest.TestCase):
         self.mocked_DM.reset_messages()
         self.mocked_DM.set_precom_response(acceptance=True, still_bidding=True, cost=proposed_value)
         for i in range(steps):
-            current_step += 1
-            uut.do_step(current_step=current_step)
+            uut.do_step(delegation_ids=[auction_id])
             rospy.sleep(1)
         self.assertTrue(self.mocked_DM.got_pre)
         self.assertTrue(test_goal.goal_is_created())
