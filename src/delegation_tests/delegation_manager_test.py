@@ -48,7 +48,6 @@ class DelegationManagerTest1(unittest.TestCase):
         self.assertEqual(delegation_manager.get_delegation(auction_id=1).get_contractor(), "PassiveDelegationManager")
 
 
-
 if __name__ == '__main__':
     rostest.rosrun(PKG, 'DelegationManagerTest', DelegationManagerTest1)
 

@@ -12,6 +12,7 @@ from behaviour_components.sensors import TopicSensor
 
 from std_msgs.msg import Bool, Int32
 
+# TODO is this necessary? better remove this
 
 class TakeOrderBehaviour(BehaviourBase):
 

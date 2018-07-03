@@ -6,7 +6,6 @@ from delegation_components.delegation_manager import DelegationManager
 from task_decomposition_module.msg import CFP
 from task_decomposition_module.srv import Precommit, PrecommitResponse, \
     Propose, ProposeResponse, Failure, FailureResponse
-from rhbp_core.srv import AddGoal, AddGoalResponse
 from delegation_components.cost_computing import CostEvaluatorBase
 from delegation_components.goal_wrapper import GoalWrapperBase
 
@@ -54,7 +53,6 @@ class MockedDelegationCommunicator(object):
         self._precom_service = rospy.Service(name=self._name + DelegationManager.precom_suffix, service_class=Precommit, handler=self.__precom_callback)
         self._propose_service = rospy.Service(name=self._name + DelegationManager.propose_suffix, service_class=Propose, handler=self.__propose_callback)
         self._failure_service = rospy.Service(name=self._name + DelegationManager.failure_suffix, service_class=Failure, handler=self.__failure_callback)
-        self._addGoalService = rospy.Service(self._service_prefix + 'AddGoal', AddGoal, self.__add_goal_callback)
         # Precom
         self.PAcceptance = False
         self.PBidding = False
@@ -70,15 +68,11 @@ class MockedDelegationCommunicator(object):
         # CFP
         self.CFP_last = None
         self.got_cfp = False
-        # AddGoal
-        self.AddG_last = None
-        self.got_addg = False
 
     def start_communication(self):
         self._precom_service = rospy.Service(name=self._name + DelegationManager.precom_suffix, service_class=Precommit, handler=self.__precom_callback)
         self._propose_service = rospy.Service(name=self._name + DelegationManager.propose_suffix, service_class=Propose, handler=self.__propose_callback)
         self._failure_service = rospy.Service(name=self._name + DelegationManager.failure_suffix, service_class=Failure, handler=self.__failure_callback)
-        self._addGoalService = rospy.Service(self._service_prefix + 'AddGoal', AddGoal, self.__add_goal_callback)
 
     def __del__(self):
         """
@@ -94,7 +88,6 @@ class MockedDelegationCommunicator(object):
         self._precom_service.shutdown()
         self._propose_service.shutdown()
         self._failure_service.shutdown()
-        self._addGoalService.shutdown()
 
     def __precom_callback(self, request):
 
@@ -136,15 +129,6 @@ class MockedDelegationCommunicator(object):
 
         self.CFP_last = msg
         self.got_cfp = True
-
-    def __add_goal_callback(self, request):
-
-        print("Got AddGoal request")
-
-        self.AddG_last = request
-        self.got_addg = True
-
-        return AddGoalResponse()
 
     #
     # Sending
@@ -201,9 +185,6 @@ class MockedDelegationCommunicator(object):
         # CFP
         self.CFP_last = None
         self.got_cfp = False
-        # AddGoal
-        self.AddG_last = None
-        self.got_addg = False
 
     def set_precom_response(self, acceptance, still_bidding, cost):
         self.PAcceptance = acceptance
