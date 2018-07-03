@@ -8,7 +8,7 @@ from task_decomposition_module.srv import Precommit, PrecommitResponse, \
 from delegation_errors import DelegationServiceError, DelegationPlanningWarning, DelegationContractorError, DelegationError
 from delegation import Delegation, Proposal
 from task import Task
-from goalwrapper import GoalWrapperBase
+from goal_wrapper import GoalWrapperBase
 from delegation_clients import DelegationClientBase
 
 
@@ -474,7 +474,7 @@ class DelegationManager(object):
         of tasks with this evaluator
 
         :param cost_function_evaluator: a working cost_function_evaluator
-        :type cost_function_evaluator: AbstractCostEvaluator
+        :type cost_function_evaluator: CostEvaluatorBase
         :param manager_name: name of the manager the evaluator is from
         :type manager_name: str
         :param client_id: ID of the client at this manager

@@ -7,11 +7,11 @@ from task_decomposition_module.msg import CFP
 from task_decomposition_module.srv import Precommit, PrecommitResponse, \
     Propose, ProposeResponse, Failure, FailureResponse
 from rhbp_core.srv import AddGoal, AddGoalResponse
-from delegation_components.cost_computing import AbstractCostEvaluator
-from delegation_components.goalwrapper import GoalWrapperBase
+from delegation_components.cost_computing import CostEvaluatorBase
+from delegation_components.goal_wrapper import GoalWrapperBase
 
 
-class MockedCostEvaluator(AbstractCostEvaluator):
+class MockedCostEvaluator(CostEvaluatorBase):
 
     def __init__(self, cost, possibility):
         super(MockedCostEvaluator, self).__init__()

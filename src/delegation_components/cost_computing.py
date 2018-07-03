@@ -2,7 +2,7 @@
 from abc import ABCMeta, abstractmethod
 
 
-class AbstractCostEvaluator(object):
+class CostEvaluatorBase(object):
     """
     Base Class for evaluators of cost functions for a DelegationManager
     """

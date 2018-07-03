@@ -68,7 +68,7 @@ class GoalWrapperBase(object):
         """
         Returns a Representation of a goal, that can be used
         to evaluate the cost of accomplishing this goal by some
-        kind of AbstractCostEvaluator
+        kind of CostEvaluatorBase
 
         Needs to be overridden!
 
