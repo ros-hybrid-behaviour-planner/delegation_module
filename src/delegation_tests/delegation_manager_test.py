@@ -39,7 +39,7 @@ class DelegationManagerTest1(unittest.TestCase):
 
         test_condition = scenarioRobot.get_test_cond()
 
-        interface.delegate(name="test_goal", conditions=[test_condition], satisfaction_threshold=1.0)
+        interface.delegate(goal_name="test_goal", conditions=[test_condition], satisfaction_threshold=1.0)
 
         for i in range(7):
             manager.step()

@@ -1,4 +1,5 @@
 
+from abc import abstractmethod, ABCMeta
 
 from delegation_components.goalwrapper import RHBPGoalWrapper
 from delegation_components.cost_computing import PDDLCostEvaluator
@@ -8,14 +9,22 @@ import utils.rhbp_logging
 rhbplog = utils.rhbp_logging.LogManager(logger_name=utils.rhbp_logging.LOGGER_DEFAULT_NAME + '.delegation')
 
 
-class DelegationClient(object):
+class DelegationClientBase(object):
     """
-    Client for the DelegationManager, part of the task decomposition module
-    that directly interfaces with outside objects.
+    Client for the DelegationManager
+
+    The part of the task decomposition module that directly interfaces
+    with outside objects.
     """
+
+    __metaclass__ = ABCMeta
+
+    # ------ Class Members ------
 
     instance_counter = 0
     all_clients_and_ids = {}
+
+    # ------ Class Methods ------
 
     @classmethod
     def unregister_at(cls, client_ids):
@@ -31,7 +40,7 @@ class DelegationClient(object):
             try:
                 cls.all_clients_and_ids[i].unregister()
             except Exception as e:
-                rhbplog.loginfo(msg="Error in unregistering of a delegationmanager at client with ID "+str(i)+": "+e.message)
+                rhbplog.loginfo(msg="Error in unregistering of a delegationmanager at client with ID " + str(i) + ": " + e.message)
                 # not essential for running, so continue
 
     @classmethod
@@ -42,10 +51,12 @@ class DelegationClient(object):
         :param client_id: ID of the client
         :type client_id: int
         :return: matching instance of client
-        :rtype: DelegationClient
+        :rtype: RHBPDelegationClient
         """
 
         return cls.all_clients_and_ids[client_id]
+
+    # ------ Constructor/Destructor ------
 
     def __init__(self):
         """
@@ -54,18 +65,23 @@ class DelegationClient(object):
 
         self._delegation_manager = None
         self._active_manager = False
-        self._active_delegations = []   # list of IDs
-        DelegationClient.instance_counter += 1
-        self._client_id = DelegationClient.instance_counter
-        DelegationClient.all_clients_and_ids[self._client_id] = self
+        self._active_delegations = []  # list of IDs
+        RHBPDelegationClient.instance_counter += 1
+        self._client_id = RHBPDelegationClient.instance_counter
+        RHBPDelegationClient.all_clients_and_ids[self._client_id] = self
 
     def __del__(self):
         self.unregister()
 
+    # ------ Registration of DelegationManagers ------
+
     def register(self, delegation_manager):
         """
         Registers a delegation manager at this client if there was none
-        registered till now
+        registered till now, else the old one will still be used
+
+        If wanted this can be overridden with a version that additionally
+        invokes add_own_cost_evaluator() with a suiting CostEvaluatorBase
 
         :param delegation_manager: DelegationManager from task_decomposition
                 module
@@ -103,6 +119,22 @@ class DelegationClient(object):
 
         return self._active_manager
 
+    def add_own_cost_evaluator(self, cost_evaluator, manager_name):
+        """
+        Adds the given cost_evaluator to the delegation_manager if one is
+        present
+
+        :param cost_evaluator: A kind of CostEvaluatorBase
+        :type cost_evaluator: CostEvaluatorBase
+        :param manager_name: Name of the corresponding manager
+        :type manager_name: str
+        """
+
+        if self._active_manager:
+            self._delegation_manager.set_cost_function_evaluator(cost_function_evaluator=cost_evaluator, manager_name=manager_name, client_id=self._client_id)
+
+    # ------ Making sure the Delegations are all up to date ------
+
     def do_step(self):
         """
         If a delegation manager is registered, it will make a step, if it has
@@ -112,16 +144,26 @@ class DelegationClient(object):
         if self._active_manager:
             self._delegation_manager.do_step(delegation_ids=self._active_delegations)
 
-    def delegate(self, name, conditions, satisfaction_threshold):
+    def notify_goal_removal(self, goal_name):
         """
-        Tries to delegate a goal with given parameters
+        Notifies the delegation_manager, if present, that a goal was removed.
+        So that he is notified if that possibly a task was terminated
 
-        :param name: name of the goal
-        :type name: str
-        :param conditions: a list of conditions
-        :type conditions: list
-        :param satisfaction_threshold: the satisfaction threshold of the goal
-        :type satisfaction_threshold: float
+        :param goal_name: name of the removed goal
+        :type goal_name: str
+        """
+
+        if self._active_manager:
+            self._delegation_manager.end_task(goal_name=goal_name)
+
+    # ------ Delegations ------
+
+    def delegate_goal_wrapper(self, goal_wrapper):
+        """
+        Tries to delegate the wrapped goal if a DelegationManager is registered
+
+        :param goal_wrapper: An kind of an GoalWrapperBase or its children
+        :type goal_wrapper: GoalWrapperBase
         :return: ID of the delegation
         :rtype: int
         :raises RuntimeError: if no DelegationManager is registered
@@ -130,12 +172,7 @@ class DelegationClient(object):
         if not self._active_manager:
             raise RuntimeError("Delegation without a registered DelegationManager")
 
-        condition_string = "\n\t".join([str(x) for x in conditions])
-        rhbplog.loginfo("New delegation attempt with the conditions:\n\t" + condition_string + "\n\t and the satisfaction threshold of " + str(satisfaction_threshold))
-
-        new_goal_wrapper = RHBPGoalWrapper(name=name, conditions=conditions, satisfaction_threshold=satisfaction_threshold)
-
-        delegation_id = self._delegation_manager.delegate(goal_wrapper=new_goal_wrapper)
+        delegation_id = self._delegation_manager.delegate(goal_wrapper=goal_wrapper)
 
         self._active_delegations.append(delegation_id)
         return delegation_id
@@ -160,11 +197,71 @@ class DelegationClient(object):
         for delegation_id in self._active_delegations:
             self.terminate_delegation(delegation_id=delegation_id)
 
+    @abstractmethod
+    def delegate(self, goal_name):
+        """
+        Tries to delegate a goal with given parameters
 
-class ManagerDelegationClient(DelegationClient):
+        Needs to be overridden!
+
+        Creates a suiting GoalWrapper and invokes delegate_goal_wrapper with
+        this goal wrapper
+
+
+        :param goal_name: name of the goal
+        :type goal_name: str
+        :rtype: int
+        :raises RuntimeError: if no DelegationManager is registered
+        """
+
+        if not self._active_manager:
+            raise RuntimeError("Delegation without a registered DelegationManager")
+
+        raise NotImplementedError
+
+
+class RHBPDelegationClient(DelegationClientBase):
     """
-    Version of the DelegationClient used for Managers that handle goals and
-    cost evaluation.
+    DelegationClient for the RHBP if no tasks can be taken and no cost be
+    evaluated
+    """
+
+    def delegate(self, goal_name, conditions=None, satisfaction_threshold=1.0):
+        """
+        Tries to delegate a goal with given parameters
+
+        :param goal_name: name of the goal
+        :type goal_name: str
+        :param conditions: a list of conditions
+        :type conditions: list
+        :param satisfaction_threshold: the satisfaction threshold of the goal
+        :type satisfaction_threshold: float
+        :return: ID of the delegation
+        :rtype: int
+        :raises RuntimeError: if no DelegationManager is registered
+        """
+
+        if not self._active_manager:
+            raise RuntimeError("Delegation without a registered DelegationManager")
+
+        if conditions is None:
+            rhbplog.logwarn("Trying to delegate a goal without conditions")
+            conditions = []
+
+        condition_string = "\n\t".join([str(x) for x in conditions])
+        rhbplog.loginfo("New delegation attempt with the conditions:\n\t" + condition_string + "\n\t and the satisfaction threshold of " + str(satisfaction_threshold))
+
+        new_goal_wrapper = RHBPGoalWrapper(name=goal_name, conditions=conditions, satisfaction_threshold=satisfaction_threshold)
+
+        delegation_id = self.delegate_goal_wrapper(goal_wrapper=new_goal_wrapper)
+
+        return delegation_id
+
+
+class RHBPManagerDelegationClient(RHBPDelegationClient):
+    """
+    Version of the RHBPDelegationClient used for Managers that handle goals as
+    tasks and cost evaluation.
     """
 
     def __init__(self, manager):
@@ -175,7 +272,7 @@ class ManagerDelegationClient(DelegationClient):
         :type manager: Manager
         """
 
-        super(ManagerDelegationClient, self).__init__()
+        super(RHBPManagerDelegationClient, self).__init__()
         self.__behaviour_manager = manager
 
     def register(self, delegation_manager, add_own_cost_evaluator=True):
@@ -193,21 +290,17 @@ class ManagerDelegationClient(DelegationClient):
         :type add_own_cost_evaluator: bool
         """
 
-        super(ManagerDelegationClient, self).register(delegation_manager=delegation_manager)
+        if self._active_manager:
+            rhbplog.logwarn("Attempt to log a new delegation_manager with the name \"" + str(delegation_manager.get_name())
+                            + "\" while one with the name \"" + str(self._delegation_manager.get_name()) + "\" is already registered.\nNew DelegationManager will be ignored.")
+            # will still use the old registered one
+            return
+
+        super(RHBPManagerDelegationClient, self).register(delegation_manager=delegation_manager)
 
         if add_own_cost_evaluator:
-            delegation_manager.set_cost_function_evaluator(cost_function_evaluator=self.get_new_cost_evaluator(), manager_name=self.__behaviour_manager._prefix, client_id=self._client_id)
-
-    def notify_goal_removal(self, goal_name):
-        """
-        Notifies the delegation_manager, if present, that a goal was removed
-
-        :param goal_name: name of the removed goal
-        :type goal_name: str
-        """
-
-        if self._active_manager:
-            self._delegation_manager.end_task(goal_name=goal_name)
+            new_cost_evaluator = self.get_new_cost_evaluator()
+            self.add_own_cost_evaluator(cost_evaluator=new_cost_evaluator, manager_name=self.__behaviour_manager._prefix)
 
     def get_new_cost_evaluator(self):
         """
