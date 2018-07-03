@@ -50,4 +50,3 @@ class Task(object):
         """
 
         return self.__goal_name
-

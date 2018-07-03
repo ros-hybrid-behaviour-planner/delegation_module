@@ -9,7 +9,7 @@ from delegation_errors import DelegationServiceError, DelegationPlanningWarning,
 from delegation import Delegation, Proposal
 from task import Task
 from goalwrapper import GoalWrapperBase
-from delegation_clients import RHBPDelegationClient
+from delegation_clients import DelegationClientBase
 
 
 class DelegationManager(object):
@@ -118,7 +118,7 @@ class DelegationManager(object):
         Unregisters this DelegationManager at all clients he is registered at
         """
 
-        RHBPDelegationClient.unregister_at(self.__active_client_ids)
+        DelegationClientBase.unregister_at(self.__active_client_ids)
         del self.__active_client_ids[:]
 
     # ------ Logging Functions ------

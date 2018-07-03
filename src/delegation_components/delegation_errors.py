@@ -27,8 +27,3 @@ class DelegationContractorError(DelegationError):
     contractor of a delegation
     """
     pass
-
-
-
-
-
