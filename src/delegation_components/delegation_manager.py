@@ -784,6 +784,9 @@ class DelegationManager(object):
         :type delegation_ids: list
         """
 
+        if len(delegation_ids) == 0:
+            return
+
         self.__loginfo("Doing a step for auctions: "+", ".join(delegation_ids.__repr__()))
 
         delegations = [self.get_delegation(auction_id=i) for i in delegation_ids]

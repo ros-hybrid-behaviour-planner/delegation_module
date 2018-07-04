@@ -137,6 +137,7 @@ class DelegationClientBase(object):
         """
 
         if self._active_manager:
+            print(self._active_delegations)
             self._delegation_manager.do_step(delegation_ids=self._active_delegations)
 
     def notify_goal_removal(self, goal_name):
