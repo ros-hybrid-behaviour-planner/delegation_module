@@ -5,10 +5,12 @@ import rospy
 import rostest
 
 from delegation_components.delegation_manager import DelegationManager
-from behaviour_components.managers import Manager
+from decomposition_components.managers import Manager
 from delegation_tests.basic_sceanrio import BasicCookingRobot
 
 PKG = "task_decomposition_module"
+
+# TODO THIS NEEDS CHANGING (whole thing)
 
 
 class DelegationManagerTest1(unittest.TestCase):
@@ -29,7 +31,7 @@ class DelegationManagerTest1(unittest.TestCase):
 
         scenarioRobot = BasicCookingRobot(planner_prefix=prefix)
 
-        interface = manager.get_delegation_client()
+        interface = manager.delegation_client
 
         interface.register(delegation_manager=delegation_manager)
 

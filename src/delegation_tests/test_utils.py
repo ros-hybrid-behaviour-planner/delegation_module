@@ -42,6 +42,47 @@ class MockedGoalWrapper(GoalWrapperBase):
         return self._name
 
 
+class MockedDelegationManager(object):
+
+    def __init__(self):
+        self._name = "test_name"
+        self.cfe = None
+        self.m_name = None
+        self.client_id = None
+        self.goal_wrapper = None
+        self.clients = []
+        self.terminated = []
+        self.task_ended = [False, ""]
+        self.stepped = []
+
+    def add_client(self, client_id):
+        self.clients.append(client_id)
+
+    def remove_client(self, client_id):
+        self.clients.remove(client_id)
+
+    def get_name(self):
+        return self._name
+
+    def set_cost_function_evaluator(self, cost_function_evaluator, manager_name, client_id):
+        self.cfe = cost_function_evaluator
+        self.m_name = manager_name
+        self.client_id = client_id
+
+    def delegate(self, goal_wrapper):
+        self.goal_wrapper = goal_wrapper
+        return 1
+
+    def terminate(self, auction_id):
+        self.terminated.append(auction_id)
+
+    def end_task(self, goal_name):
+        self.task_ended = [True, goal_name]
+
+    def do_step(self, delegation_ids):
+        self.stepped = delegation_ids
+
+
 class MockedDelegationCommunicator(object):
 
     def __init__(self, name, manager_name):
