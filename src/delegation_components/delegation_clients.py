@@ -35,7 +35,7 @@ class DelegationClientBase(object):
             try:
                 cls.all_clients_and_ids[i].unregister()
             except Exception as e:
-                cls.logger.logwarn(msg="Error in unregistering of a DelegationManager at client with ID " + str(i) + ": " + e.message)
+                cls.logger.logwarn(msg="Error in unregistering of a DelegationManager at client with ID " + str(i) + ": " + str(e.message))
                 # not essential for running, so continue
 
     @classmethod
@@ -137,7 +137,6 @@ class DelegationClientBase(object):
         """
 
         if self._active_manager:
-            print(self._active_delegations)
             self._delegation_manager.do_step(delegation_ids=self._active_delegations)
 
     def notify_goal_removal(self, goal_name):
@@ -190,7 +189,8 @@ class DelegationClientBase(object):
         Terminates all current delegations of this client
         """
 
-        for delegation_id in self._active_delegations:
+        delegations = self._active_delegations[:]   # copy, for changing original
+        for delegation_id in delegations:
             self.terminate_delegation(delegation_id=delegation_id)
 
     @abstractmethod
@@ -214,3 +214,9 @@ class DelegationClientBase(object):
             raise RuntimeError("Delegation without a registered DelegationManager")
 
         raise NotImplementedError
+
+    # ------ Properties -------
+
+    @property
+    def id(self):
+        return self._client_id
