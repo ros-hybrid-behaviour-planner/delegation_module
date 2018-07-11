@@ -68,6 +68,8 @@ class MockedDelegationManager(object):
         self.terminated = []
         self.task_ended = [False, ""]
         self.stepped = []
+        self.own_cost = None
+        self.steps = None
 
     def add_client(self, client_id):
         self.clients.append(client_id)
@@ -83,8 +85,10 @@ class MockedDelegationManager(object):
         self.m_name = manager_name
         self.client_id = client_id
 
-    def delegate(self, goal_wrapper):
+    def delegate(self, goal_wrapper, auction_steps=3, own_cost=-1):
         self.goal_wrapper = goal_wrapper
+        self.own_cost = own_cost
+        self.steps = auction_steps
         return 1
 
     def terminate(self, auction_id):

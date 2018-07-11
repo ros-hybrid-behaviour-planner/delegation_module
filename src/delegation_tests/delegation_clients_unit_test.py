@@ -14,6 +14,9 @@ class TestClient(DelegationClientBase):
     def delegate(self, goal_name):
         return
 
+    def start_work(self, delegation_id):
+        return
+
 
 class AdditionalTestDelegationManager(object):
     """
@@ -111,15 +114,18 @@ class DelegationClientTest(unittest.TestCase):
     def test_delegation(self):
         uut = TestClient()
         goal = "Testgoal"
+        own_cost = 5
 
         self.assertRaises(RuntimeError, uut.delegate_goal_wrapper, goal)
 
         uut.register(delegation_manager=self.dm)
 
-        del_id = uut.delegate_goal_wrapper(goal_wrapper=goal)
+        del_id = uut.delegate_goal_wrapper(goal_wrapper=goal, own_cost=own_cost)
         self.assertEqual(uut._active_delegations[0], 1)
         self.assertEqual(del_id, 1)
         self.assertEqual(self.dm.goal_wrapper, goal)
+        self.assertEqual(self.dm.own_cost, own_cost)
+        self.assertEqual(self.dm.steps, TestClient.AUCTION_STEPS)
 
     def test_terminations(self):
         uut = TestClient()
