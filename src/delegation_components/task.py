@@ -41,7 +41,7 @@ class Task(object):
 
         return self.__auctioneer_name
 
-    def get_goal_name(self):
+    def goal_name(self):
         """
         Gets the name of corresponding goal
 

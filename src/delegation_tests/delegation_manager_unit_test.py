@@ -229,7 +229,7 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertEqual(test_goal.get_manager(), self.mocked_manager_name)
         uut.terminate(auction_id=auction_id)
 
-        # TODO own cost wins
+        # own cost wins
         test_goal = MockedGoalWrapper(name=goal_name)
         own_cost = 2
         auction_id = uut.delegate(goal_wrapper=test_goal, auction_steps=steps, client_id=self.mocked_client_id, own_cost=own_cost)

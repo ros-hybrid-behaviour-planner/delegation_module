@@ -11,4 +11,4 @@ class TaskTest(unittest.TestCase):
     def test_getter(self):
         self.assertEqual(self.task.get_auction_id(), 1)
         self.assertEqual(self.task.get_auctioneer_name(), "test")
-        self.assertEqual(self.task.get_goal_name(), "goal")
+        self.assertEqual(self.task.goal_name(), "goal")
