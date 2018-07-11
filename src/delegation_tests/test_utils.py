@@ -11,6 +11,15 @@ from delegation_components.cost_evaluators import CostEvaluatorBase
 from delegation_components.goal_wrappers import GoalWrapperBase
 
 
+class FunctionPointerTester(object):
+
+    def __init__(self):
+        self.function_called = False
+
+    def function(self):
+        self.function_called = True
+
+
 class MockedClient(DelegationClientBase):
 
     def __init__(self):
