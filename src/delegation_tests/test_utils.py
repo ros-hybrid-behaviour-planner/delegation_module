@@ -260,6 +260,19 @@ class MockedDelegationCommunicator(object):
         self.PNewCost = cost
 
 
+class MockedManager(object):
+
+    def __init__(self):
+        self._prefix = "test_prefix"
+
+    def plan_with_additional_goal(self):
+        return self._prefix
+
+    @property
+    def prefix(self):
+        return self._prefix
+
+
 if __name__ == '__main__':
 
     rospy.init_node(name="PassiveNode")
