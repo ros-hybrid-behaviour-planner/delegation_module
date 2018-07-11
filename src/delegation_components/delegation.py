@@ -234,7 +234,7 @@ class Delegation(object):
         :rtype: str
         """
 
-        return self.__goal_wrapper.get_goal_name()
+        return self.__goal_wrapper.goal_name
 
     def send_goal(self, name):
         """

@@ -8,7 +8,7 @@ from task_decomposition_module.msg import CFP
 from task_decomposition_module.srv import Precommit, PrecommitResponse, \
     Propose, ProposeResponse, Failure, FailureResponse
 from delegation_components.cost_evaluators import CostEvaluatorBase
-from delegation_components.goal_wrapper import GoalWrapperBase
+from delegation_components.goal_wrappers import GoalWrapperBase
 
 
 class MockedClient(DelegationClientBase):

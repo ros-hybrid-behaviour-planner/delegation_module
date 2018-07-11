@@ -8,7 +8,7 @@ from task_decomposition_module.srv import Precommit, PrecommitResponse, \
 from delegation_errors import DelegationServiceError, DelegationPlanningWarning, DelegationContractorError, DelegationError
 from delegation import Delegation, Proposal
 from task import Task
-from goal_wrapper import GoalWrapperBase
+from goal_wrappers import GoalWrapperBase
 from delegation_clients import DelegationClientBase
 
 
@@ -535,7 +535,7 @@ class DelegationManager(object):
         """
 
         for task in self.__tasks:
-            if task.get_goal_name() == goal_name:
+            if task.goal_name() == goal_name:
                 return task
 
         raise LookupError("No task with the goal named " + str(goal_name))

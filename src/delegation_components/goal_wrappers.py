@@ -30,7 +30,8 @@ class GoalWrapperBase(object):
         if self._created_goal:
             del self._goal
 
-    def get_goal_name(self):
+    @property
+    def goal_name(self):
         """
         Returns the name of the corresponding goal
 
