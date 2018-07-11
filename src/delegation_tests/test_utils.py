@@ -1,7 +1,6 @@
-#! /usr/bin/env python2
+
 
 import rospy
-
 from delegation_components.delegation_clients import DelegationClientBase
 from delegation_components.delegation_manager import DelegationManager
 from task_decomposition_module.msg import CFP
@@ -9,6 +8,12 @@ from task_decomposition_module.srv import Precommit, PrecommitResponse, \
     Propose, ProposeResponse, Failure, FailureResponse
 from delegation_components.cost_evaluators import CostEvaluatorBase
 from delegation_components.goal_wrappers import GoalWrapperBase
+
+
+"""
+This File just contains classes that are used to mock different objects of the
+package, used by tests.
+"""
 
 
 class FunctionPointerTester(object):
@@ -271,14 +276,3 @@ class MockedManager(object):
     @property
     def prefix(self):
         return self._prefix
-
-
-if __name__ == '__main__':
-
-    rospy.init_node(name="PassiveNode")
-
-    rospy.loginfo("Starting a completely passive node that can answer DelegationServiceRequests, but wont actually do anything")
-
-    passive_manager = MockedDelegationCommunicator(name="MockedCommunicator", manager_name="MockedManager")
-
-    rospy.spin()
