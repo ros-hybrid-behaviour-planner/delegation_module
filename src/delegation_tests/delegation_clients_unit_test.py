@@ -126,6 +126,7 @@ class DelegationClientTest(unittest.TestCase):
         self.assertEqual(self.dm.goal_wrapper, goal)
         self.assertEqual(self.dm.own_cost, own_cost)
         self.assertEqual(self.dm.steps, TestClient.AUCTION_STEPS)
+        self.assertEqual(self.dm.client_id, uut.id)
 
     def test_terminations(self):
         uut = TestClient()

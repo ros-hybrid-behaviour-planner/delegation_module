@@ -99,10 +99,11 @@ class MockedDelegationManager(object):
         self.m_name = manager_name
         self.client_id = client_id
 
-    def delegate(self, goal_wrapper, auction_steps=3, own_cost=-1):
+    def delegate(self, goal_wrapper, client_id, auction_steps=3, own_cost=-1):
         self.goal_wrapper = goal_wrapper
         self.own_cost = own_cost
         self.steps = auction_steps
+        self.client_id = client_id
         return 1
 
     def terminate(self, auction_id):

@@ -173,7 +173,7 @@ class DelegationClientBase(object):
         if not self._active_manager:
             raise RuntimeError("Delegation without a registered DelegationManager")
 
-        delegation_id = self._delegation_manager.delegate(goal_wrapper=goal_wrapper, auction_steps=DelegationClientBase.AUCTION_STEPS, own_cost=own_cost)
+        delegation_id = self._delegation_manager.delegate(goal_wrapper=goal_wrapper, client_id=self._client_id, auction_steps=DelegationClientBase.AUCTION_STEPS, own_cost=own_cost)
 
         self._active_delegations.append(delegation_id)
         return delegation_id
