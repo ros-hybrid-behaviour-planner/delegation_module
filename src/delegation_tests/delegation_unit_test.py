@@ -11,8 +11,13 @@ class DelegationTest(unittest.TestCase):
         self.goal_name = "test_goal"
         self.wrapper = MockedGoalWrapper(name=self.goal_name)
 
+    def test_clients(self):
+        test_id = 1
+        delegation = Delegation(goal_wrapper=self.wrapper, auction_id=1, client_id=test_id)
+        self.assertEqual(delegation.client_id, test_id)
+
     def test_contractors(self):
-        delegation = Delegation(goal_wrapper=self.wrapper, auction_id=1)
+        delegation = Delegation(goal_wrapper=self.wrapper, auction_id=1, client_id=1)
         self.assertRaises(DelegationContractorError, delegation.get_contractor)
 
         name = "contractor"
@@ -25,7 +30,7 @@ class DelegationTest(unittest.TestCase):
         self.assertRaises(DelegationContractorError, delegation.get_contractor)
 
     def test_proposals(self):
-        delegation = Delegation(goal_wrapper=self.wrapper, auction_id=1)
+        delegation = Delegation(goal_wrapper=self.wrapper, auction_id=1, client_id=1)
         self.assertRaises(LookupError, delegation.get_best_proposal)
         self.assertFalse(delegation.has_proposals())
 
@@ -47,7 +52,7 @@ class DelegationTest(unittest.TestCase):
         self.assertFalse(delegation.has_proposals())
 
     def test_forbidden_bidders(self):
-        delegation = Delegation(goal_wrapper=self.wrapper, auction_id=1)
+        delegation = Delegation(goal_wrapper=self.wrapper, auction_id=1, client_id=1)
 
         bad_name = "forbidden"
         good_name = "good"
@@ -71,7 +76,7 @@ class DelegationTest(unittest.TestCase):
 
     def test_steps(self):
         steps = 5
-        delegation = Delegation(goal_wrapper=self.wrapper, auction_id=1, auction_steps=steps)
+        delegation = Delegation(goal_wrapper=self.wrapper, auction_id=1, auction_steps=steps, client_id=1)
 
         for i in range(steps - 1):
             self.assertFalse(delegation.decrement_and_check_steps())
@@ -89,7 +94,7 @@ class DelegationTest(unittest.TestCase):
         self.assertTrue(delegation.decrement_and_check_steps())
 
     def test_goal_interaction(self):
-        delegation = Delegation(goal_wrapper=self.wrapper, auction_id=1)
+        delegation = Delegation(goal_wrapper=self.wrapper, auction_id=1, client_id=1)
 
         manager = "manager"
         self.assertEqual(delegation.get_goal_name(), self.goal_name)
@@ -101,7 +106,7 @@ class DelegationTest(unittest.TestCase):
 
     def test_auction_progress(self):
         auction_id = 1
-        delegation = Delegation(goal_wrapper=self.wrapper, auction_id=auction_id)
+        delegation = Delegation(goal_wrapper=self.wrapper, auction_id=auction_id, client_id=1)
         self.assertEqual(delegation.get_auction_id(), auction_id)
 
         bidder = "bidder"

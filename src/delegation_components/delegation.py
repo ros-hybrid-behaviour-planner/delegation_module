@@ -9,17 +9,19 @@ class Delegation(object):
     It contains all necessary information about this delegation.
     """
 
-    def __init__(self, goal_wrapper, auction_id, auction_steps=3):
+    def __init__(self, goal_wrapper, auction_id, client_id, auction_steps=3):
         """
         Constructor of an instance of Delegation
 
         :param auction_steps: steps that are waited for proposals
         :param goal_wrapper: goal that should be delegated
         :param auction_id: ID of the delegation/auction
+        :param client_id: ID of the client that started this delegation
         """
 
         self.__goal_wrapper = goal_wrapper
         self.__auction_id = auction_id
+        self.__client_id = client_id
         self.__auction_steps_max = auction_steps
         self.__auction_steps = auction_steps
         self.__proposals = []
@@ -308,6 +310,17 @@ class Delegation(object):
 
         self.terminate_contract()
         self.state.set_ready()
+
+    @property
+    def client_id(self):
+        """
+        ID of the client that started this delegation
+
+        :return: ID of the client that started this delegation
+        :rtype: int
+        """
+
+        return self.__client_id
 
 
 class Proposal(object):

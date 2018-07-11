@@ -1,7 +1,7 @@
 import unittest
 import rospy
 
-from delegation_tests.test_utils import MockedDelegationCommunicator, MockedCostEvaluator, MockedGoalWrapper
+from delegation_tests.test_utils import MockedDelegationCommunicator, MockedCostEvaluator, MockedGoalWrapper, MockedClient
 from delegation_components.delegation_manager import DelegationManager
 from delegation_components.task import Task
 from delegation_components.delegation_errors import DelegationError
@@ -16,7 +16,8 @@ class DelegationManagerTest(unittest.TestCase):
         self.mocked_manager_name = "MockedManager"
         self.uut_name = "UUT"
         self.uut_mocked_manager_name = "UUTManager"
-        self.mocked_client_id = 1
+        self.mocked_client = MockedClient()
+        self.mocked_client_id = self.mocked_client.id
         self.uut = DelegationManager(instance_name=self.uut_name, max_tasks=1)
         self.mocked_DM = MockedDelegationCommunicator(name=self.mocked_DM_name, manager_name=self.mocked_manager_name)
         self.mocked_cost_eval = MockedCostEvaluator(cost=0, possibility=True)
@@ -116,7 +117,7 @@ class DelegationManagerTest(unittest.TestCase):
         steps = 2
 
         rospy.sleep(1)  # ros msgs directly after startup are lost sometimes
-        auction_id = uut.delegate(goal_wrapper=test_goal, auction_steps=steps)
+        auction_id = uut.delegate(goal_wrapper=test_goal, auction_steps=steps, client_id=self.mocked_client_id)
         rospy.sleep(1)
         self.assertTrue(self.mocked_DM.got_cfp)
         cfp = self.mocked_DM.CFP_last
@@ -128,6 +129,7 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertIsInstance(delegation, Delegation)
         self.assertTrue(delegation.state.is_waiting_for_proposals())
         self.assertEqual(delegation.get_auction_id(), auction_id)
+        self.assertEqual(delegation.client_id, self.mocked_client_id)
 
     def test_propose_callback(self):
         uut = self.new_uut()
@@ -137,7 +139,7 @@ class DelegationManagerTest(unittest.TestCase):
         proposed_value = 2
 
         rospy.sleep(1)  # ros msgs directly after startup are lost sometimes
-        auction_id = uut.delegate(goal_wrapper=test_goal, auction_steps=steps)
+        auction_id = uut.delegate(goal_wrapper=test_goal, auction_steps=steps, client_id=self.mocked_client_id)
         rospy.sleep(1)
         cfp = self.mocked_DM.CFP_last
         self.mocked_DM.send_propose(value=proposed_value, target_name=cfp.name, auction_id=cfp.auction_id)
@@ -156,7 +158,7 @@ class DelegationManagerTest(unittest.TestCase):
 
         # No proposals
         rospy.sleep(1)  # ros msgs directly after startup are lost sometimes
-        auction_id = uut.delegate(goal_wrapper=test_goal, auction_steps=steps)
+        auction_id = uut.delegate(goal_wrapper=test_goal, auction_steps=steps, client_id=self.mocked_client_id)
         rospy.sleep(1)
         self.mocked_DM.reset_messages()
         for i in range(steps-1):
@@ -170,7 +172,8 @@ class DelegationManagerTest(unittest.TestCase):
         uut.terminate(auction_id=auction_id)
 
         # a proposal, but not true anymore, not bidding anymore
-        auction_id = uut.delegate(goal_wrapper=test_goal, auction_steps=steps)
+        test_goal = MockedGoalWrapper(name=goal_name)
+        auction_id = uut.delegate(goal_wrapper=test_goal, auction_steps=steps, client_id=self.mocked_client_id)
         rospy.sleep(1)
         self.mocked_DM.send_propose(value=proposed_value, target_name=self.uut_name, auction_id=auction_id)
         self.mocked_DM.reset_messages()
@@ -183,7 +186,8 @@ class DelegationManagerTest(unittest.TestCase):
         uut.terminate(auction_id=auction_id)
 
         # a proposal, but not true anymore, still bidding
-        auction_id = uut.delegate(goal_wrapper=test_goal, auction_steps=steps)
+        test_goal = MockedGoalWrapper(name=goal_name)
+        auction_id = uut.delegate(goal_wrapper=test_goal, auction_steps=steps, client_id=self.mocked_client_id)
         rospy.sleep(1)
         self.mocked_DM.send_propose(value=proposed_value, target_name=self.uut_name, auction_id=auction_id)
         self.mocked_DM.reset_messages()
@@ -197,7 +201,8 @@ class DelegationManagerTest(unittest.TestCase):
         uut.terminate(auction_id=auction_id)
 
         # a proposal, but no answer to precommit
-        auction_id = uut.delegate(goal_wrapper=test_goal, auction_steps=steps)
+        test_goal = MockedGoalWrapper(name=goal_name)
+        auction_id = uut.delegate(goal_wrapper=test_goal, auction_steps=steps, client_id=self.mocked_client_id)
         rospy.sleep(1)
         self.mocked_DM.send_propose(value=proposed_value, target_name=self.uut_name, auction_id=auction_id)
         self.mocked_DM.reset_messages()
@@ -210,7 +215,8 @@ class DelegationManagerTest(unittest.TestCase):
         self.mocked_DM.start_communication()
 
         # proposal and accepted precom
-        auction_id = uut.delegate(goal_wrapper=test_goal, auction_steps=steps)
+        test_goal = MockedGoalWrapper(name=goal_name)
+        auction_id = uut.delegate(goal_wrapper=test_goal, auction_steps=steps, client_id=self.mocked_client_id)
         rospy.sleep(1)
         self.mocked_DM.send_propose(value=proposed_value, target_name=self.uut_name, auction_id=auction_id)
         self.mocked_DM.reset_messages()
@@ -221,6 +227,17 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertTrue(self.mocked_DM.got_pre)
         self.assertTrue(test_goal.goal_is_created())
         self.assertEqual(test_goal.get_manager(), self.mocked_manager_name)
+        uut.terminate(auction_id=auction_id)
+
+        # TODO own cost wins
+        test_goal = MockedGoalWrapper(name=goal_name)
+        own_cost = 2
+        auction_id = uut.delegate(goal_wrapper=test_goal, auction_steps=steps, client_id=self.mocked_client_id, own_cost=own_cost)
+        for i in range(steps):
+            uut.do_step(delegation_ids=[auction_id])
+            rospy.sleep(1)
+        self.assertFalse(test_goal.goal_is_created())
+        self.assertTrue(self.mocked_client.started_working)
 
     def test_terminate(self):
         uut = self.new_uut()
@@ -230,7 +247,7 @@ class DelegationManagerTest(unittest.TestCase):
         proposed_value = 2
 
         # proposal and accepted precom
-        auction_id = uut.delegate(goal_wrapper=test_goal, auction_steps=steps)
+        auction_id = uut.delegate(goal_wrapper=test_goal, auction_steps=steps, client_id=self.mocked_client_id)
         rospy.sleep(1)
         self.mocked_DM.send_propose(value=proposed_value, target_name=self.uut_name, auction_id=auction_id)
         self.mocked_DM.reset_messages()

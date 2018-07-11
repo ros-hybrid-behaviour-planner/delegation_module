@@ -637,7 +637,10 @@ class DelegationManager(object):
 
             if bidder_name == self._name:
                 self.__loginfo("I won my own auction with the ID " + str(auction_id))
-                # TODO make sure i do the work myself
+                # make sure i do the work myself
+                client_id = delegation.client_id
+                client = DelegationClientBase.get_client(client_id=client_id)
+                client.start_work(delegation_id=delegation.get_auction_id)
                 return
 
             self.__loginfo("Sending a precommit to " + str(bidder_name) + " who bid " + str(
@@ -744,7 +747,7 @@ class DelegationManager(object):
             # TODO we would have to retry
             pass
 
-    def delegate(self, goal_wrapper, auction_steps=3, own_cost=-1):
+    def delegate(self, goal_wrapper, client_id, auction_steps=3, own_cost=-1):
         """
         Makes a delegation for the goal and starts an auction for this
         delegation. Adds my own cost as a proposal if wanted.
@@ -753,11 +756,13 @@ class DelegationManager(object):
         a winner will be determined and the goal will be delegated to that
         winner.
 
+        :param goal_wrapper: wrapper for the goal that should be delegated
+        :type goal_wrapper: GoalWrapperBase
+        :param client_id: ID of the client who starts this delegation
+        :type client_id: int
         :param auction_steps: number of steps
                 that are waited for proposals while the auction is running
         :type auction_steps: int
-        :param goal_wrapper: wrapper for the goal that should be delegated
-        :type goal_wrapper: GoalWrapperBase
         :param own_cost: cost if i have to achieve the goal myself, less than 1
                 if not achievable for me
         :type own_cost: int
@@ -765,14 +770,14 @@ class DelegationManager(object):
         :rtype: int
         """
 
-        new = Delegation(goal_wrapper=goal_wrapper, auction_id=self.get_new_auction_id(), auction_steps=auction_steps)
+        new = Delegation(goal_wrapper=goal_wrapper, auction_id=self.get_new_auction_id(), auction_steps=auction_steps, client_id=client_id)
+
+        self.__delegations.append(new)
+        self.__start_auction(delegation=new)
 
         if own_cost > 0:
             proposal = Proposal(name=self._name, value=own_cost)
             new.add_proposal(proposal=proposal)
-
-        self.__delegations.append(new)
-        self.__start_auction(delegation=new)
 
         return new.get_auction_id()
 

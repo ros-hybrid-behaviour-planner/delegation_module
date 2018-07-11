@@ -2,12 +2,26 @@
 
 import rospy
 
+from delegation_components.delegation_clients import DelegationClientBase
 from delegation_components.delegation_manager import DelegationManager
 from task_decomposition_module.msg import CFP
 from task_decomposition_module.srv import Precommit, PrecommitResponse, \
     Propose, ProposeResponse, Failure, FailureResponse
 from delegation_components.cost_computing import CostEvaluatorBase
 from delegation_components.goal_wrapper import GoalWrapperBase
+
+
+class MockedClient(DelegationClientBase):
+
+    def __init__(self):
+        super(MockedClient, self).__init__()
+        self.started_working = False
+
+    def delegate(self, goal_name):
+        raise RuntimeError("MockedClient cant delegate")
+
+    def start_work(self, delegation_id):
+        self.started_working = True
 
 
 class MockedCostEvaluator(CostEvaluatorBase):

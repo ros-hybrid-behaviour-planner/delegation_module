@@ -19,6 +19,9 @@ class DelegationClientBase(object):
     all_clients_and_ids = {}
     logger = rospy
 
+    # Configure if needed
+    AUCTION_STEPS = 3   # Number of step invocations before the auction is ended
+
     # ------ Class Methods ------
 
     @classmethod
@@ -153,12 +156,15 @@ class DelegationClientBase(object):
 
     # ------ Delegations ------
 
-    def delegate_goal_wrapper(self, goal_wrapper):
+    def delegate_goal_wrapper(self, goal_wrapper, own_cost=-1):
         """
         Tries to delegate the wrapped goal if a DelegationManager is registered
 
         :param goal_wrapper: An kind of an GoalWrapperBase or its children
         :type goal_wrapper: GoalWrapperBase
+        :param own_cost: cost if i could do this task myself for the given cost.
+                This should be negative if i can not
+        :type own_cost: float
         :return: ID of the delegation
         :rtype: int
         :raises RuntimeError: if no DelegationManager is registered
@@ -167,7 +173,7 @@ class DelegationClientBase(object):
         if not self._active_manager:
             raise RuntimeError("Delegation without a registered DelegationManager")
 
-        delegation_id = self._delegation_manager.delegate(goal_wrapper=goal_wrapper)
+        delegation_id = self._delegation_manager.delegate(goal_wrapper=goal_wrapper, auction_steps=DelegationClientBase.AUCTION_STEPS, own_cost=own_cost)
 
         self._active_delegations.append(delegation_id)
         return delegation_id
@@ -198,20 +204,39 @@ class DelegationClientBase(object):
         """
         Tries to delegate a goal with given parameters
 
-        Needs to be overridden!
-
         Creates a suiting GoalWrapper and invokes delegate_goal_wrapper with
         this goal wrapper
 
+        Needs to be overridden!
 
         :param goal_name: name of the goal
         :type goal_name: str
+        :return: the ID of the delegation that was created
         :rtype: int
         :raises RuntimeError: if no DelegationManager is registered
         """
 
         if not self._active_manager:
             raise RuntimeError("Delegation without a registered DelegationManager")
+
+        raise NotImplementedError
+
+    @abstractmethod
+    def start_work(self, delegation_id):
+        """
+        This is needed if own delegation attempts can come back (a own_cost was
+        given at delegation_start) and will be invoked if the delegation is won
+        by the own proposal
+
+        Needs to make sure the work is done myself
+
+        Needs to be overridden!
+
+        :param delegation_id: ID of the delegation that i need to start working
+                myself for
+        :type delegation_id: int
+        :return: None
+        """
 
         raise NotImplementedError
 
