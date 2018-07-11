@@ -17,25 +17,6 @@ class CostEvaluatorBase(object):
         self._last_cost = -1
         self._last_possibility = False
 
-    def get_cost(self):
-        """
-        Returns the last computed cost
-
-        :return: the last computed cost
-        """
-
-        return self._last_cost
-
-    def get_possibility(self):
-        """
-        Returns the last computed possibility
-
-        :return: whether in last computation the
-                task was possible
-        """
-
-        return self._last_possibility
-
     @abstractmethod
     def compute_cost_and_possibility(self, goal_representation):
         """
@@ -48,3 +29,24 @@ class CostEvaluatorBase(object):
         """
 
         raise NotImplementedError
+
+    @property
+    def last_cost(self):
+        """
+        Returns the last computed cost
+
+        :return: the last computed cost
+        """
+
+        return self._last_cost
+
+    @property
+    def last_possibility(self):
+        """
+        Returns the last computed possibility
+
+        :return: whether in last computation the
+                task was possible
+        """
+
+        return self._last_possibility
