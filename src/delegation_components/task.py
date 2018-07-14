@@ -76,6 +76,8 @@ class EmployerAdministration(object):
             else:
                 self._employer_dict[employer] = new_incidence[employer]
 
+        return copy(self._employer_dict)
+
     def remove_task(self, task):
         old_incidence = task.employer_incidence
         for employer in old_incidence.keys():
@@ -86,6 +88,8 @@ class EmployerAdministration(object):
                     self._employer_dict[employer] = combined_value - remove_value
                 else:
                     del self._employer_dict[employer]
+
+        return copy(self._employer_dict)
 
     def get_current_employer_incidence(self):
         return copy(self._employer_dict)
