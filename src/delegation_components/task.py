@@ -91,5 +91,17 @@ class EmployerAdministration(object):
 
         return copy(self._employer_dict)
 
+    def check_task(self, task, max_value):
+        incidence = task.employer_incidence
+        for employer in incidence.keys():
+            if self._employer_dict.__contains__(employer):
+                if self._employer_dict[employer] + incidence[employer] > max_value:
+                    return False
+            else:
+                if incidence[employer] > max_value:
+                    return False
+
+        return True
+
     def get_current_employer_incidence(self):
         return copy(self._employer_dict)

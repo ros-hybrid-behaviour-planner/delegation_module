@@ -39,3 +39,12 @@ class TaskTest(unittest.TestCase):
         res = self.employer_admin.remove_task(self.task)
         self.assertEqual(self.employer_admin.get_current_employer_incidence(), res)
         self.assertEqual(len(self.employer_admin.get_current_employer_incidence().keys()), 0)
+
+    def test_check_task(self):
+        self.task = Task(auction_id=1, auctioneer_name="test", goal_name="goal", employer_incidence=self.test_incidence)
+        self.assertTrue(self.employer_admin.check_task(self.task, 3))
+        self.assertFalse(self.employer_admin.check_task(self.task, 1))
+        self.employer_admin.add_task(self.task)
+        self.assertFalse(self.employer_admin.check_task(self.task, 3))
+        self.assertTrue(self.employer_admin.check_task(self.task, 4))
+
