@@ -91,8 +91,7 @@ class EmployerAdministration(object):
 
         return copy(self._employer_dict)
 
-    def check_task(self, task, max_value):
-        incidence = task.employer_incidence
+    def check_incidence(self, incidence, max_value):
         for employer in incidence.keys():
             if self._employer_dict.__contains__(employer):
                 if self._employer_dict[employer] + incidence[employer] > max_value:

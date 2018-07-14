@@ -42,9 +42,9 @@ class TaskTest(unittest.TestCase):
 
     def test_check_task(self):
         self.task = Task(auction_id=1, auctioneer_name="test", goal_name="goal", employer_incidence=self.test_incidence)
-        self.assertTrue(self.employer_admin.check_task(self.task, 3))
-        self.assertFalse(self.employer_admin.check_task(self.task, 1))
+        self.assertTrue(self.employer_admin.check_incidence(self.task.employer_incidence, 3))
+        self.assertFalse(self.employer_admin.check_incidence(self.task.employer_incidence, 1))
         self.employer_admin.add_task(self.task)
-        self.assertFalse(self.employer_admin.check_task(self.task, 3))
-        self.assertTrue(self.employer_admin.check_task(self.task, 4))
+        self.assertFalse(self.employer_admin.check_incidence(self.task.employer_incidence, 3))
+        self.assertTrue(self.employer_admin.check_incidence(self.task.employer_incidence, 4))
 
