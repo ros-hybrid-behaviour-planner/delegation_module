@@ -1,4 +1,3 @@
-#! /usr/bin/env python2
 
 import rospy
 
@@ -89,6 +88,9 @@ class DelegationManager(object):
         Destructor for the DelegationManager
         """
 
+        # fail all current tasks
+        for task in self.__tasks:
+            self.fail_task(goal_name=task.goal_name())
         self.__logwarn("Stopping services and topics")
         self.__stop_services()
         self.__stop_topics()
@@ -830,18 +832,3 @@ class DelegationManager(object):
     @property
     def cost_computable(self):
         return self.__cost_computable
-
-
-if __name__ == '__main__':
-
-    # TODO this is just for testing purposes right now a passive manager
-
-    name = "Default"
-
-    rospy.init_node(name+"DelegationNode")
-    dm = DelegationManager(name)
-
-    rospy.loginfo("Starting Node with name \"" + name + "\"")
-
-    rospy.loginfo("Spinning")
-    rospy.spin()
