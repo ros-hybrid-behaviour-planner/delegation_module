@@ -69,6 +69,9 @@ class MockedGoalWrapper(GoalWrapperBase):
     def get_goal_representation(self):
         return self._name
 
+    def check_if_still_alive(self):
+        return True
+
 
 class MockedDelegationManager(object):
 

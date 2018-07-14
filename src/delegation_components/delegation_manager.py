@@ -688,7 +688,7 @@ class DelegationManager(object):
                     auction_id))
                 delegation.remove_proposal(proposal=best_proposal)
                 if best_proposal.get_value() >= response.new_proposal:
-                    self.__logwarn("The new proposal is not worse than the old proposal while he is not accepting the old proposal, something is off!\nWont add this new proposal to be safed")
+                    self.__logwarn("The new proposal is not worse than the old proposal while he is not accepting the old proposal, something is off!\nWont add this new proposal to be saved")
                     continue
                 try:
                     delegation.add_proposal(proposal=Proposal(bidder_name, response.new_proposal))

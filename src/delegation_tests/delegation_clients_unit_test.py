@@ -23,7 +23,8 @@ class AdditionalTestDelegationManager(object):
     This has no other methods of the DM on purpose
     """
 
-    def get_name(self):
+    @staticmethod
+    def get_name():
         return "TestManager"
 
 
@@ -79,12 +80,12 @@ class DelegationClientTest(unittest.TestCase):
         uut = TestClient()
 
         manager = "test_manager"
-        costeval = MockedCostEvaluator(cost=1, possibility=True)
-        uut.add_own_cost_evaluator(cost_evaluator=costeval, manager_name=manager)
+        cost_eval = MockedCostEvaluator(cost=1, possibility=True)
+        uut.add_own_cost_evaluator(cost_evaluator=cost_eval, manager_name=manager)
 
         uut.register(delegation_manager=self.dm)
-        uut.add_own_cost_evaluator(cost_evaluator=costeval, manager_name=manager)
-        self.assertEqual(self.dm.cfe, costeval)
+        uut.add_own_cost_evaluator(cost_evaluator=cost_eval, manager_name=manager)
+        self.assertEqual(self.dm.cfe, cost_eval)
         self.assertEqual(self.dm.m_name, manager)
         self.assertEqual(self.dm.client_id, uut.id)
 
@@ -113,7 +114,7 @@ class DelegationClientTest(unittest.TestCase):
 
     def test_delegation(self):
         uut = TestClient()
-        goal = "Testgoal"
+        goal = "TestGoal"
         own_cost = 5
 
         self.assertRaises(RuntimeError, uut.delegate_goal_wrapper, goal)
