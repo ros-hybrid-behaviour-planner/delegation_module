@@ -1,11 +1,13 @@
 
+from copy import copy
+
 
 class Task(object):
     """
     Class that represents a task in context of the DelegationManager
     """
 
-    def __init__(self, auction_id, auctioneer_name, goal_name):
+    def __init__(self, auction_id, auctioneer_name, goal_name, employer_incidence=None):
         """
         Constructor
 
@@ -20,6 +22,11 @@ class Task(object):
         self.__goal_name = goal_name
         self.__auction_id = auction_id
         self.__auctioneer_name = auctioneer_name
+
+        if employer_incidence is None:
+            self.__employer_incidence = {}
+        else:
+            self.__employer_incidence = employer_incidence
 
     def get_auction_id(self):
         """
@@ -50,3 +57,35 @@ class Task(object):
         """
 
         return self.__goal_name
+
+    @property
+    def employer_incidence(self):
+        return self.__employer_incidence
+
+
+class EmployerAdministration(object):
+
+    def __init__(self):
+        self._employer_dict = {}
+
+    def add_task(self, task):
+        new_incidence = task.employer_incidence
+        for employer in new_incidence.keys():
+            if self._employer_dict.__contains__(employer):
+                self._employer_dict[employer] += new_incidence[employer]
+            else:
+                self._employer_dict[employer] = new_incidence[employer]
+
+    def remove_task(self, task):
+        old_incidence = task.employer_incidence
+        for employer in old_incidence.keys():
+            if self._employer_dict.__contains__(employer):
+                combined_value = self._employer_dict[employer]
+                remove_value = old_incidence[employer]
+                if combined_value > remove_value:
+                    self._employer_dict[employer] = combined_value - remove_value
+                else:
+                    del self._employer_dict[employer]
+
+    def get_current_employer_incidence(self):
+        return copy(self._employer_dict)
