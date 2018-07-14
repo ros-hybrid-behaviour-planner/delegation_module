@@ -286,6 +286,10 @@ class Delegation(object):
         self.set_contractor(name=bidder_name)
         self.send_goal(name=manager_name)
 
+    def check_if_alive(self):
+
+        return self.__goal_wrapper.check_if_still_alive()
+
     def terminate_contract(self):
         """
         Removes contractor and terminates goal

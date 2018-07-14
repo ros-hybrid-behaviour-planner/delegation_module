@@ -726,7 +726,7 @@ class DelegationManager(object):
 
     def fail_task(self, goal_name):
         """
-        Sends a message to the associated contractor, that this task will no
+        Sends a message to the associated employer, that this task will no
         longer be pursued, if this is a task that comes from a different source
 
         :param goal_name: name of the goal that failed
@@ -796,6 +796,14 @@ class DelegationManager(object):
 
         delegations = [self.get_delegation(auction_id=i) for i in delegation_ids]
         waiting_delegations = [d for d in delegations if d.state.is_waiting_for_proposals()]
+        running_delegations = [d for d in delegations if d.state.is_delegated_running()]
+
+        for delegation in running_delegations:
+            if not delegation.check_if_alive():
+                contractor_name = delegation.get_contractor()
+                delegation.forbid_bidder(name=contractor_name)
+                delegation.fail_current_delegation()  # unregisters goal
+                self.__start_auction(delegation)
 
         for delegation in waiting_delegations:
             # decrementing the needed steps and checking at the same time

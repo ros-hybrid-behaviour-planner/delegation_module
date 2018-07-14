@@ -101,3 +101,16 @@ class GoalWrapperBase(object):
         """
 
         raise NotImplementedError
+
+    @abstractmethod
+    def check_if_still_alive(self):
+        """
+        Checks whether this goal is still actively pursued by the contractor
+
+        :return: if it is actively pursued
+        :rtype: bool
+        """
+
+        raise NotImplementedError
+
+
