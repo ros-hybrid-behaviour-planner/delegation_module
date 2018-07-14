@@ -1,6 +1,4 @@
 
-from copy import copy
-
 
 class Task(object):
     """
@@ -57,50 +55,3 @@ class Task(object):
         """
 
         return self.__goal_name
-
-    @property
-    def employer_incidence(self):
-        return self.__employer_incidence
-
-
-class EmployerAdministration(object):
-
-    def __init__(self):
-        self._employer_dict = {}
-
-    def add_task(self, task):
-        new_incidence = task.employer_incidence
-        for employer in new_incidence.keys():
-            if self._employer_dict.__contains__(employer):
-                self._employer_dict[employer] += new_incidence[employer]
-            else:
-                self._employer_dict[employer] = new_incidence[employer]
-
-        return copy(self._employer_dict)
-
-    def remove_task(self, task):
-        old_incidence = task.employer_incidence
-        for employer in old_incidence.keys():
-            if self._employer_dict.__contains__(employer):
-                combined_value = self._employer_dict[employer]
-                remove_value = old_incidence[employer]
-                if combined_value > remove_value:
-                    self._employer_dict[employer] = combined_value - remove_value
-                else:
-                    del self._employer_dict[employer]
-
-        return copy(self._employer_dict)
-
-    def check_incidence(self, incidence, max_value):
-        for employer in incidence.keys():
-            if self._employer_dict.__contains__(employer):
-                if self._employer_dict[employer] + incidence[employer] > max_value:
-                    return False
-            else:
-                if incidence[employer] > max_value:
-                    return False
-
-        return True
-
-    def get_current_employer_incidence(self):
-        return copy(self._employer_dict)
