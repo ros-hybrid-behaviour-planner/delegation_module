@@ -1,7 +1,7 @@
 
 from abc import abstractmethod, ABCMeta
 import rospy
-
+from delegation_components.delegation_errors import DelegationError
 
 class DelegationClientBase(object):
     """
@@ -168,12 +168,16 @@ class DelegationClientBase(object):
         :return: ID of the delegation
         :rtype: int
         :raises RuntimeError: if no DelegationManager is registered
+        :raises DelegationError: if the Delegation-attempt was not successful
         """
 
         if not self._active_manager:
             raise RuntimeError("Delegation without a registered DelegationManager")
 
-        delegation_id = self._delegation_manager.delegate(goal_wrapper=goal_wrapper, client_id=self._client_id, auction_steps=DelegationClientBase.AUCTION_STEPS, own_cost=own_cost)
+        try:
+            delegation_id = self._delegation_manager.delegate(goal_wrapper=goal_wrapper, client_id=self._client_id, auction_steps=DelegationClientBase.AUCTION_STEPS, own_cost=own_cost)
+        except DelegationError:
+            raise
 
         self._active_delegations.append(delegation_id)
         return delegation_id

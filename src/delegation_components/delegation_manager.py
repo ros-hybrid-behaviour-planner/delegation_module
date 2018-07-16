@@ -808,7 +808,12 @@ class DelegationManager(object):
         :type own_cost: int
         :return: the auction_id of the auction
         :rtype: int
+        :raises DelegationError: if the MAX_DELEGATION_DEPTH is reached
         """
+
+        if self.__current_delegation_depth >= self.MAX_DELEGATION_DEPTH:
+            self.__logwarn("Will not make a new Delegation because the maximum Delegation Depth is reached")
+            raise DelegationError("MAX_DELEGATION_DEPTH is reached")
 
         new = Delegation(goal_wrapper=goal_wrapper, auction_id=self.get_new_auction_id(), auction_steps=auction_steps, client_id=client_id)
 
