@@ -3,7 +3,7 @@ import rospy
 
 from task_decomposition_module.msg import CFP
 from task_decomposition_module.srv import Precommit, PrecommitResponse, \
-    Propose, ProposeResponse, Failure, FailureResponse
+    Propose, ProposeResponse, Failure, FailureResponse, Get_DepthResponse, Get_Depth
 from delegation_errors import DelegationServiceError, DelegationPlanningWarning, DelegationContractorError, DelegationError
 from delegation import Delegation, Proposal
 from task import Task
@@ -27,8 +27,10 @@ class DelegationManager(object):
     precom_suffix = "/precom"
     propose_suffix = "/propose"
     failure_suffix = "/failure"
+    get_depth_suffix = "/get_depth"
     cfp_topic_name = "CFP_Topic"
     SERVICE_TIMEOUT = 2     # should be configured according to system specs
+    MAX_DELEGATION_DEPTH = 5
 
     # ------ Initiation methods ------
 
@@ -52,12 +54,16 @@ class DelegationManager(object):
         self.__max_tasks = max_tasks
         self.__tasks = []
 
+        self.__current_delegation_depth = 0
+
         self.__cost_computable = False
         self.__cost_function_evaluator = None
         self.__registered_manager = ""
-        self.__currentStepCounter = -1
         self.__manager_client_id = 0    # ID of the client of the manager
         self.__active_client_ids = []   # list of client IDs
+
+        # not started at construction
+        self._get_depth_service = None
 
         self.__init_topics()
         self.__init_services()
@@ -80,6 +86,9 @@ class DelegationManager(object):
         self._precom_service = rospy.Service(name=self._name+self.precom_suffix, service_class=Precommit, handler=self.__precom_callback)
         self._propose_service = rospy.Service(name=self._name+self.propose_suffix, service_class=Propose, handler=self.__propose_callback)
         self._failure_service = rospy.Service(name=self._name+self.failure_suffix, service_class=Failure, handler=self.__failure_callback)
+
+        # not started at construction
+        self._get_depth_service = None
 
     # ------ Deletion methods ------
 
@@ -106,6 +115,8 @@ class DelegationManager(object):
         self._precom_service.shutdown()
         self._propose_service.shutdown()
         self._failure_service.shutdown()
+        if self._get_depth_service is not None:
+            self._get_depth_service.shutdown()
 
     def __stop_topics(self):
         """
@@ -147,6 +158,19 @@ class DelegationManager(object):
 
     # ------ Callback functions ------
 
+    # noinspection PyUnusedLocal
+    def __get_depth_callback(self, request):
+        """
+        Returns the current delegation depth of this DelegationManager
+
+        :param request: request of the Get_Depth.srv type (empty)
+        :return: response with the current delegation depth
+        """
+
+        response = Get_DepthResponse()
+        response.depth = self.__current_delegation_depth
+        return response
+
     def __precom_callback(self, request):
         """
         Callback for precommit service call
@@ -164,6 +188,7 @@ class DelegationManager(object):
         auction_id = request.auction_id
         goal_representation = request.goal_representation
         goal_name = request.goal_name
+        depth = request.depth
 
         self.__loginfo(str(auctioneer_name) + " sent a precommit for his auction " + str(auction_id))
 
@@ -202,7 +227,7 @@ class DelegationManager(object):
         if new_cost <= request.old_proposal:
             self.__loginfo("Have accepted a contract from " + str(auctioneer_name))
 
-            new_task = Task(auction_id=auction_id, auctioneer_name=auctioneer_name, goal_name=goal_name)
+            new_task = Task(auction_id=auction_id, auctioneer_name=auctioneer_name, goal_name=goal_name, depth=depth)
             try:
                 self.add_task(new_task)
             except DelegationError as e:
@@ -391,9 +416,10 @@ class DelegationManager(object):
             self.__logwarn("Waiting to long for service: " + str(service_name))
             raise DelegationServiceError("Waiting to long: " + str(service_name))
 
+        depth = self.__current_delegation_depth + 1
         try:
             send_precom = rospy.ServiceProxy(service_name, Precommit)
-            response = send_precom(goal_representation, self._name, goal_name, auction_id, proposal_value)
+            response = send_precom(goal_representation, self._name, goal_name, auction_id, proposal_value, depth)
         except rospy.ServiceException:
             self.__logwarn("Precommit call failed")
             raise DelegationServiceError("Call failed: " + str(service_name))
@@ -462,12 +488,24 @@ class DelegationManager(object):
         else:
             raise DelegationError
 
+        self.update_delegation_depth()
+
     def add_client(self, client_id):
         self.__active_client_ids.append(client_id)
+
+    def update_delegation_depth(self):
+        if len(self.__tasks) == 0:
+            self.__current_delegation_depth = 0
+        else:
+            self.__current_delegation_depth = max([t.depth for t in self.__tasks])
 
     def remove_client(self, client_id):
         if self.__active_client_ids.__contains__(client_id):
             self.__active_client_ids.remove(client_id)
+
+    def start_depth_service(self, prefix):
+        name = prefix + self.get_depth_suffix
+        self._get_depth_service = rospy.Service(name=name, service_class=Get_Depth, handler=self.__get_depth_callback)
 
     def set_cost_function_evaluator(self, cost_function_evaluator, manager_name, client_id):
         """
@@ -823,6 +861,7 @@ class DelegationManager(object):
         try:
             task = self.get_task_by_goal_name(goal_name=goal_name)
             self.__tasks.remove(task)
+            self.update_delegation_depth()
             self.__loginfo("Task with goal_name " + goal_name + " was finished")
             del task
         except LookupError:

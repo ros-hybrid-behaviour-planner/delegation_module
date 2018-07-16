@@ -221,13 +221,13 @@ class MockedDelegationCommunicator(object):
         response = send_proposal(self._name, auction_id, value)
         return response
 
-    def send_precom(self, target_name, auction_id, proposal_value, goal_representation, goal_name):
+    def send_precom(self, target_name, auction_id, proposal_value, goal_representation, goal_name, depth):
 
         service_name = target_name + DelegationManager.precom_suffix
         rospy.wait_for_service(service=service_name, timeout=DelegationManager.SERVICE_TIMEOUT)
 
         send_precom = rospy.ServiceProxy(service_name, Precommit)
-        response = send_precom(goal_representation, self._name, goal_name, auction_id, proposal_value)
+        response = send_precom(goal_representation, self._name, goal_name, auction_id, proposal_value, depth)
 
         return response
 

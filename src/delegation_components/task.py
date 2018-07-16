@@ -5,7 +5,7 @@ class Task(object):
     Class that represents a task in context of the DelegationManager
     """
 
-    def __init__(self, auction_id, auctioneer_name, goal_name, employer_incidence=None):
+    def __init__(self, auction_id, auctioneer_name, goal_name, depth):
         """
         Constructor
 
@@ -20,11 +20,7 @@ class Task(object):
         self.__goal_name = goal_name
         self.__auction_id = auction_id
         self.__auctioneer_name = auctioneer_name
-
-        if employer_incidence is None:
-            self.__employer_incidence = {}
-        else:
-            self.__employer_incidence = employer_incidence
+        self.__depth = depth
 
     def get_auction_id(self):
         """
@@ -55,3 +51,7 @@ class Task(object):
         """
 
         return self.__goal_name
+
+    @property
+    def depth(self):
+        return self.__depth
