@@ -400,7 +400,7 @@ class DelegationManager(object):
             self.__logwarn("Propose call failed")
             raise DelegationServiceError("Call failed: " + str(service_name))
 
-    def __send_precom(self, target_name, auction_id, proposal_value, goal_representation, goal_name):
+    def __send_precom(self, target_name, auction_id, proposal_value, goal_representation, goal_name, depth):
         """
         Calls the Precommit service of the winning bidder of this delegation
 
@@ -422,7 +422,6 @@ class DelegationManager(object):
             self.__logwarn("Waiting to long for service: " + str(service_name))
             raise DelegationServiceError("Waiting to long: " + str(service_name))
 
-        depth = self.__current_delegation_depth + 1
         try:
             send_precom = rospy.ServiceProxy(service_name, Precommit)
             response = send_precom(goal_representation, self._name, goal_name, auction_id, proposal_value, depth)
@@ -490,11 +489,11 @@ class DelegationManager(object):
             raise DelegationServiceError("Waiting to long: " + str(service_name))
 
         try:
-            send_get_depth = rospy.ServiceProxy(service_name, Failure)
+            send_get_depth = rospy.ServiceProxy(service_name, Get_Depth)
             depth = send_get_depth()
             return depth
         except rospy.ServiceException:
-            self.__logwarn("Failure call failed")
+            self.__logwarn("Get_Depth call failed")
             raise DelegationServiceError("Call failed: " + str(service_name))
 
     # ------ Simple Getter/Setter for members ------
@@ -511,7 +510,8 @@ class DelegationManager(object):
         """
 
         try:
-            depth = self._get_depth_service(prefix=prefix)
+            response = self.__send_get_depth(prefix=prefix)
+            depth = response.depth
         except DelegationServiceError:
             self.__logwarn("Could not determine the remote depth for "+str(prefix)+" --> will return None")
             depth = None
@@ -666,11 +666,17 @@ class DelegationManager(object):
         :return: response of the call
         """
 
+        if self.depth_checking_possible:
+            depth = self.__current_delegation_depth + 1
+        else:
+            depth = delegation.depth + 1
+
         response = self.__send_precom(target_name=proposal.get_name(),
                                       auction_id=delegation.get_auction_id(),
                                       goal_name=delegation.get_goal_name(),
                                       proposal_value=proposal.get_value(),
-                                      goal_representation=delegation.get_goal_representation())
+                                      goal_representation=delegation.get_goal_representation(),
+                                      depth=depth)
         return response
 
     def __start_auction(self, delegation):
@@ -871,7 +877,7 @@ class DelegationManager(object):
         if not self._check_depth(depth=depth):
             raise DelegationError("MAX_DELEGATION_DEPTH is reached")
 
-        new = Delegation(goal_wrapper=goal_wrapper, auction_id=self.get_new_auction_id(), auction_steps=auction_steps, client_id=client_id)
+        new = Delegation(goal_wrapper=goal_wrapper, auction_id=self.get_new_auction_id(), auction_steps=auction_steps, client_id=client_id, depth=depth)
 
         self.__delegations.append(new)
         self.__start_auction(delegation=new)

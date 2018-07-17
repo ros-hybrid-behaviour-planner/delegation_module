@@ -9,7 +9,7 @@ class Delegation(object):
     It contains all necessary information about this delegation.
     """
 
-    def __init__(self, goal_wrapper, auction_id, client_id, auction_steps=3):
+    def __init__(self, goal_wrapper, auction_id, client_id, depth, auction_steps=3):
         """
         Constructor of an instance of Delegation
 
@@ -17,6 +17,7 @@ class Delegation(object):
         :param goal_wrapper: goal that should be delegated
         :param auction_id: ID of the delegation/auction
         :param client_id: ID of the client that started this delegation
+        :param depth: depth of this delegation
         """
 
         self.__goal_wrapper = goal_wrapper
@@ -29,6 +30,7 @@ class Delegation(object):
         self.__contractor = ""
         self.__got_contractor = False
         self.state = DelegationState()
+        self.__depth = depth
 
     def __del__(self):
         """
@@ -325,6 +327,11 @@ class Delegation(object):
         """
 
         return self.__client_id
+
+    @property
+    def depth(self):
+
+        return self.__depth
 
 
 class Proposal(object):
