@@ -88,6 +88,7 @@ class MockedDelegationManager(object):
         self.own_cost = None
         self.steps = None
         self.known_depth = None
+        self.start_service_prefix = None
 
     def add_client(self, client_id):
         self.clients.append(client_id)
@@ -119,6 +120,13 @@ class MockedDelegationManager(object):
 
     def do_step(self, delegation_ids):
         self.stepped = delegation_ids
+
+    @property
+    def depth_checking_possible(self):
+        return True
+
+    def start_depth_service(self, prefix):
+        self.start_service_prefix = prefix
 
 
 class MockedDelegationCommunicator(object):
