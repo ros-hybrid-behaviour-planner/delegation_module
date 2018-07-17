@@ -156,6 +156,7 @@ class DelegationManagerTest(unittest.TestCase):
         test_goal = MockedGoalWrapper(name=goal_name)
         test_depth = 3
         test_task = Task(auction_id=100, goal_name=goal_name, depth=test_depth, auctioneer_name="test")
+        uut.set_cost_function_evaluator(client_id=1, cost_function_evaluator=self.mocked_cost_eval, manager_name=self.mocked_manager_name)
         uut.add_task(test_task)
         steps = 3
         proposed_value = 2

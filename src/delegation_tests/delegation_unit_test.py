@@ -134,6 +134,11 @@ class DelegationTest(unittest.TestCase):
         self.assertRaises(DelegationContractorError, delegation.get_contractor)
         self.assertFalse(self.wrapper.goal_is_created())
 
+    def test_depth(self):
+        depth = 3
+        delegation = Delegation(goal_wrapper=self.wrapper, auction_id=1, client_id=1, depth=depth)
+        self.assertEqual(delegation.depth, depth)
+
 
 class ProposalTest(unittest.TestCase):
 
