@@ -29,7 +29,13 @@ class DelegationManager(object):
     failure_suffix = "/failure"
     get_depth_suffix = "/get_depth"
     cfp_topic_name = "CFP_Topic"
-    SERVICE_TIMEOUT = 2     # should be configured according to system specs
+
+    # should be configured according to system specs
+    SERVICE_TIMEOUT = 2
+
+    # can be configured to prevent loops of delegations or to deep delegations
+    # NO DELEGATION will be done by the corresponding instance if this is reached
+    # Set this to 0 or lower if no boundary is needed
     MAX_DELEGATION_DEPTH = 5
 
     # ------ Initiation methods ------
@@ -473,7 +479,43 @@ class DelegationManager(object):
             self.__logwarn("CFP publish failed")
             raise DelegationServiceError("Call failed: CFP")
 
+    def __send_get_depth(self, prefix):
+        self.__loginfo("Sending a Get_Depth request to " + str(prefix))
+
+        service_name = prefix + self.get_depth_suffix
+        try:
+            rospy.wait_for_service(service=service_name, timeout=self.SERVICE_TIMEOUT)
+        except rospy.ROSException:
+            self.__logwarn("Waiting to long for service: " + str(service_name))
+            raise DelegationServiceError("Waiting to long: " + str(service_name))
+
+        try:
+            send_get_depth = rospy.ServiceProxy(service_name, Failure)
+            depth = send_get_depth()
+            return depth
+        except rospy.ServiceException:
+            self.__logwarn("Failure call failed")
+            raise DelegationServiceError("Call failed: " + str(service_name))
+
     # ------ Simple Getter/Setter for members ------
+
+    def check_remote_depth(self, prefix):
+        """
+        Gets the depth from a remote source with the given service-prefix
+
+        :param prefix: service-prefix of source from which the depth is to be
+                determined
+        :type prefix: str
+        :return: depth if call successful, else None
+        :rtype: int or None
+        """
+
+        try:
+            depth = self._get_depth_service(prefix=prefix)
+        except DelegationServiceError:
+            self.__logwarn("Could not determine the remote depth for "+str(prefix)+" --> will return None")
+            depth = None
+        return depth
 
     def add_task(self, new_task):
         """
@@ -506,6 +548,11 @@ class DelegationManager(object):
     def start_depth_service(self, prefix):
         name = prefix + self.get_depth_suffix
         self._get_depth_service = rospy.Service(name=name, service_class=Get_Depth, handler=self.__get_depth_callback)
+
+    def stop_depth_service(self):
+        if self._get_depth_service is not None:
+            self._get_depth_service.shutdown()
+            self._get_depth_service = None
 
     def set_cost_function_evaluator(self, cost_function_evaluator, manager_name, client_id):
         """
@@ -787,7 +834,7 @@ class DelegationManager(object):
             # TODO we would have to retry
             pass
 
-    def delegate(self, goal_wrapper, client_id, auction_steps=3, own_cost=-1):
+    def delegate(self, goal_wrapper, client_id, auction_steps=3, own_cost=-1, known_depth=None):
         """
         Makes a delegation for the goal and starts an auction for this
         delegation. Adds my own cost as a proposal if wanted.
@@ -803,16 +850,25 @@ class DelegationManager(object):
         :param auction_steps: number of steps
                 that are waited for proposals while the auction is running
         :type auction_steps: int
-        :param own_cost: cost if i have to achieve the goal myself, less than 1
-                if not achievable for me
+        :param own_cost: cost if i have to achieve the goal myself, greater than
+                0 if not achievable for me
         :type own_cost: int
+        :param known_depth: if a specific delegation depth is known for this
+                delegation, give this depth here
+        :type known_depth: int
         :return: the auction_id of the auction
         :rtype: int
         :raises DelegationError: if the MAX_DELEGATION_DEPTH is reached
         """
 
-        if self.__current_delegation_depth >= self.MAX_DELEGATION_DEPTH:
-            self.__logwarn("Will not make a new Delegation because the maximum Delegation Depth is reached")
+        if self.depth_checking_possible:
+            depth = self.__current_delegation_depth
+        elif known_depth is not None:
+            depth = known_depth
+        else:
+            depth = -1
+
+        if not self._check_depth(depth=depth):
             raise DelegationError("MAX_DELEGATION_DEPTH is reached")
 
         new = Delegation(goal_wrapper=goal_wrapper, auction_id=self.get_new_auction_id(), auction_steps=auction_steps, client_id=client_id)
@@ -825,6 +881,25 @@ class DelegationManager(object):
             new.add_proposal(proposal=proposal)
 
         return new.get_auction_id()
+
+    def _check_depth(self, depth):
+        """
+        Checks whether the given delegation depth makes a delegation possible
+        or not.
+
+        :param depth: depth that has to be checked
+        :type depth: int
+        :return: whether it is possible or not
+        :rtype: bool
+        """
+
+        if self.MAX_DELEGATION_DEPTH <= 0:
+            return True
+        if depth < self.MAX_DELEGATION_DEPTH:
+            return True
+
+        self.__logwarn("Maximum Delegation Depth is reached")
+        return False
 
     def do_step(self, delegation_ids):
         """
@@ -872,6 +947,12 @@ class DelegationManager(object):
         except LookupError:
             # this goal was no task given by a different manager
             return
+
+    @property
+    def depth_checking_possible(self):
+
+        # is only given if cost computable
+        return self.__cost_computable
 
     @property
     def cost_computable(self):

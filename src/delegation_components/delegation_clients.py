@@ -3,6 +3,7 @@ from abc import abstractmethod, ABCMeta
 import rospy
 from delegation_components.delegation_errors import DelegationError
 
+
 class DelegationClientBase(object):
     """
     Client for the DelegationManager
@@ -156,7 +157,7 @@ class DelegationClientBase(object):
 
     # ------ Delegations ------
 
-    def delegate_goal_wrapper(self, goal_wrapper, own_cost=-1):
+    def delegate_goal_wrapper(self, goal_wrapper, own_cost=-1, known_depth=None):
         """
         Tries to delegate the wrapped goal if a DelegationManager is registered
 
@@ -165,6 +166,9 @@ class DelegationClientBase(object):
         :param own_cost: cost if i could do this task myself for the given cost.
                 This should be negative if i can not
         :type own_cost: float
+        :param known_depth: if a specific delegation depth is known for this
+                delegation, give this depth here
+        :type known_depth: int
         :return: ID of the delegation
         :rtype: int
         :raises RuntimeError: if no DelegationManager is registered
@@ -175,7 +179,7 @@ class DelegationClientBase(object):
             raise RuntimeError("Delegation without a registered DelegationManager")
 
         try:
-            delegation_id = self._delegation_manager.delegate(goal_wrapper=goal_wrapper, client_id=self._client_id, auction_steps=DelegationClientBase.AUCTION_STEPS, own_cost=own_cost)
+            delegation_id = self._delegation_manager.delegate(goal_wrapper=goal_wrapper, client_id=self._client_id, auction_steps=DelegationClientBase.AUCTION_STEPS, own_cost=own_cost, known_depth=known_depth)
         except DelegationError:
             raise
 
