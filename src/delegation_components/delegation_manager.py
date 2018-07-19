@@ -216,7 +216,7 @@ class DelegationManager(object):
             return response
 
         try:
-            new_cost, possible_goal = self.__cost_function_evaluator.compute_cost_and_possibility(goal_representation=goal_representation, current_task_count=len(self.__tasks),  max_task_count=self.__max_tasks,current_depth=self.__current_delegation_depth, max_depth=self.MAX_DELEGATION_DEPTH)
+            new_cost, possible_goal = self.__cost_function_evaluator.compute_cost_and_possibility(goal_representation=goal_representation, current_task_count=len(self.__tasks),  max_task_count=self.__max_tasks, current_depth=depth, max_depth=self.MAX_DELEGATION_DEPTH)
             if possible_goal:
                 s = "possible with a cost of " + str(new_cost)
             else:
@@ -334,6 +334,7 @@ class DelegationManager(object):
         auctioneer_name = msg.name
         auction_id = msg.auction_id
         goal_representation = msg.goal_representation
+        depth = msg.depth
 
         if auctioneer_name == self._name:
             # Do not bid this way for own auctions!
@@ -353,7 +354,7 @@ class DelegationManager(object):
             return
 
         try:
-            cost, possible_goal = self.__cost_function_evaluator.compute_cost_and_possibility(goal_representation=goal_representation, current_task_count=len(self.__tasks),  max_task_count=self.__max_tasks,current_depth=self.__current_delegation_depth, max_depth=self.MAX_DELEGATION_DEPTH)
+            cost, possible_goal = self.__cost_function_evaluator.compute_cost_and_possibility(goal_representation=goal_representation, current_task_count=len(self.__tasks),  max_task_count=self.__max_tasks, current_depth=depth, max_depth=self.MAX_DELEGATION_DEPTH)
             if possible_goal:
                 s = "possible with a cost of " + str(cost)
             else:
