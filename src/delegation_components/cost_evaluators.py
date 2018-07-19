@@ -18,7 +18,7 @@ class CostEvaluatorBase(object):
         self._last_possibility = False
 
     @abstractmethod
-    def compute_cost_and_possibility(self, goal_representation):
+    def compute_cost_and_possibility(self, goal_representation, current_task_count, max_task_count, current_depth, max_depth):
         """
         Computes the cost and possibility of fulfilling a goal
         on this platform
