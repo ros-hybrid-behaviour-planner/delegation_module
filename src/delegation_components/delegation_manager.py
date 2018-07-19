@@ -456,7 +456,7 @@ class DelegationManager(object):
             self.__logwarn("Failure call failed")
             raise DelegationServiceError("Call failed: " + str(service_name))
 
-    def __send_cfp(self, goal_representation, auction_id):
+    def __send_cfp(self, goal_representation, auction_id, depth):
         """
         Sends a CFP-broadcast over the CFP-topic
 
@@ -471,6 +471,7 @@ class DelegationManager(object):
         msg.goal_representation = goal_representation
         msg.name = self._name
         msg.auction_id = auction_id
+        msg.depth = depth
 
         try:
             self._cfp_publisher.publish(msg)
@@ -690,12 +691,17 @@ class DelegationManager(object):
         # Making sure that the delegation is in the right state
         delegation.start_auction()
 
+        if self.depth_checking_possible:
+            depth = self.__current_delegation_depth + 1
+        else:
+            depth = delegation.depth + 1
+
         auction_id = delegation.get_auction_id()
         goal_representation = delegation.get_goal_representation()
 
         self.__loginfo("Starting auction with ID: " + str(auction_id))
         try:
-            self.__send_cfp(goal_representation=goal_representation, auction_id=auction_id)
+            self.__send_cfp(goal_representation=goal_representation, auction_id=auction_id, depth=depth)
         except DelegationServiceError as e:
             self.__logwarn("CFP was not sent right (error_message:\"" + str(e.message) + "\")")
             # restart auction next step by ending it than (it will restart,
