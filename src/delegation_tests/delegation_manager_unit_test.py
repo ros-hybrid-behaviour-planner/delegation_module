@@ -22,6 +22,7 @@ class DelegationManagerTest(unittest.TestCase):
         self.mocked_DM = MockedDelegationCommunicator(name=self.mocked_DM_name, manager_name=self.mocked_manager_name)
         self.mocked_cost_eval = MockedCostEvaluator(cost=0, possibility=True)
         self.standard_depth = 2
+        self.standard_members = ["Member1", "Member2"]
 
     def tearDown(self):
         self.mocked_DM.__del__()
@@ -87,15 +88,16 @@ class DelegationManagerTest(unittest.TestCase):
 
         auction_id = 1
         goal_rep = "test_goal"
+        depth = 2
 
         # No Manager present
-        self.mocked_DM.send_cfp(auction_id=auction_id, goal_representation=goal_rep)
+        self.mocked_DM.send_cfp(auction_id=auction_id, goal_representation=goal_rep, depth=depth, delegation_members=self.standard_members)
         rospy.sleep(1)
         self.assertFalse(self.mocked_DM.got_pro)
 
         # "Manager" present, cost computable
         uut.set_cost_function_evaluator(self.mocked_cost_eval, client_id=self.mocked_client_id, manager_name=self.uut_mocked_manager_name)
-        self.mocked_DM.send_cfp(auction_id=auction_id, goal_representation=goal_rep)
+        self.mocked_DM.send_cfp(auction_id=auction_id, goal_representation=goal_rep, depth=depth, delegation_members=self.standard_members)
         rospy.sleep(1)
         self.assertTrue(self.mocked_DM.got_pro)
         res = self.mocked_DM.Pro_last
@@ -107,7 +109,7 @@ class DelegationManagerTest(unittest.TestCase):
 
         # Deleted Manager
         uut.remove_cost_function_evaluator()
-        self.mocked_DM.send_cfp(auction_id=auction_id, goal_representation=goal_rep)
+        self.mocked_DM.send_cfp(auction_id=auction_id, goal_representation=goal_rep, depth=depth, delegation_members=self.standard_members)
         rospy.sleep(1)
         self.assertFalse(self.mocked_DM.got_pro)
 
@@ -278,21 +280,21 @@ class DelegationManagerTest(unittest.TestCase):
         # cost not computable
         uut = self.new_uut()
         uut.check_possible_tasks()
-        response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth)
+        response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth, delegation_members=self.standard_members)
         self.assertFalse(response.acceptance)
         self.assertFalse(response.still_biding)
 
         # max tasks = 0
         uut = self.new_uut(max_tasks=0)
         uut.set_cost_function_evaluator(cost_function_evaluator=self.mocked_cost_eval, manager_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)
-        response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth)
+        response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth, delegation_members=self.standard_members)
         self.assertFalse(response.acceptance)
         self.assertFalse(response.still_biding)
 
         # not possible anymore
         uut = self.new_uut(max_tasks=1)
         uut.set_cost_function_evaluator(cost_function_evaluator=MockedCostEvaluator(cost=0, possibility=False), manager_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)
-        response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth)
+        response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth, delegation_members=self.standard_members)
         self.assertFalse(response.acceptance)
         self.assertFalse(response.still_biding)
 
@@ -300,7 +302,7 @@ class DelegationManagerTest(unittest.TestCase):
         new_cost = old_proposal + 1
         uut = self.new_uut(max_tasks=1)
         uut.set_cost_function_evaluator(cost_function_evaluator=MockedCostEvaluator(cost=new_cost, possibility=True), manager_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)
-        response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth)
+        response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth, delegation_members=self.standard_members)
         self.assertFalse(response.acceptance)
         self.assertTrue(response.still_biding)
         self.assertEqual(response.new_proposal, new_cost)
@@ -309,7 +311,7 @@ class DelegationManagerTest(unittest.TestCase):
         new_cost = old_proposal
         uut = self.new_uut(max_tasks=1)
         uut.set_cost_function_evaluator(cost_function_evaluator=MockedCostEvaluator(cost=new_cost, possibility=True), manager_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)
-        response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth)
+        response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth, delegation_members=self.standard_members)
         self.assertTrue(response.acceptance)
         self.assertEqual(response.manager_name, self.uut_mocked_manager_name)
 

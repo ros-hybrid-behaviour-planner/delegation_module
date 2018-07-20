@@ -233,13 +233,13 @@ class MockedDelegationCommunicator(object):
         response = send_proposal(self._name, auction_id, value)
         return response
 
-    def send_precom(self, target_name, auction_id, proposal_value, goal_representation, goal_name, depth):
+    def send_precom(self, target_name, auction_id, proposal_value, goal_representation, goal_name, depth, delegation_members):
 
         service_name = target_name + DelegationManager.precom_suffix
         rospy.wait_for_service(service=service_name, timeout=DelegationManager.SERVICE_TIMEOUT)
 
         send_precom = rospy.ServiceProxy(service_name, Precommit)
-        response = send_precom(goal_representation, self._name, goal_name, auction_id, proposal_value, depth)
+        response = send_precom(goal_representation, self._name, goal_name, auction_id, proposal_value, depth, delegation_members)
 
         return response
 
@@ -252,12 +252,14 @@ class MockedDelegationCommunicator(object):
         response = send_failure(self._name, auction_id)
         return response
 
-    def send_cfp(self, goal_representation, auction_id):
+    def send_cfp(self, goal_representation, auction_id, depth, delegation_members):
 
         msg = CFP()
         msg.goal_representation = goal_representation
         msg.name = self._name
         msg.auction_id = auction_id
+        msg.depth = depth
+        msg.current_members = delegation_members
 
         self._cfp_publisher.publish(msg)
 
