@@ -8,6 +8,7 @@ from task_decomposition_module.srv import Precommit, PrecommitResponse, \
     Propose, ProposeResponse, Failure, FailureResponse
 from delegation_components.cost_evaluators import CostEvaluatorBase
 from delegation_components.goal_wrappers import GoalWrapperBase
+from copy import copy
 
 
 """
@@ -45,7 +46,8 @@ class MockedCostEvaluator(CostEvaluatorBase):
         self._last_cost = cost
         self._last_possibility = possibility
 
-    def compute_cost_and_possibility(self, goal_representation):
+    # noinspection PyUnusedLocal
+    def compute_cost_and_possibility(self, goal_representation, current_task_count, max_task_count, current_depth, max_depth, members, own_name):
 
         return self._last_cost, self._last_possibility
 
@@ -283,10 +285,54 @@ class MockedManager(object):
 
     def __init__(self):
         self._prefix = "test_prefix"
+        self.plan = dict()
+        self.actions = dict()
+        self.actions[0] = "DelegationBehaviour"
+        self.actions[1] = "BehaviourBase"
+        self.plan["actions"] = self.actions
+        self.plan["cost"] = 2.0
+        b1 = MockedBehaviour(name="DelegationBehaviour", b_type="Delegation")
+        b2 = MockedBehaviour(name="BehaviourBase", b_type="Base")
+        b3 = MockedBehaviour(name="DelegationBehaviour2", b_type="Delegation")
+        self.behaviours = [b1, b2, b3]
+        self.failing_plans = False
+        self.plan_exception = False
 
-    def plan_with_additional_goal(self):
-        return self._prefix
+    # noinspection PyUnusedLocal
+    def plan_with_additional_goal(self, goal_statement):
+        if self.plan_exception:
+            raise Exception()
+        if self.failing_plans:
+            return dict()
+        plan = dict()
+        actions = copy(self.actions)
+        actions[2] = "DelegationBehaviour2"
+        actions[3] = "BehaviourBase"
+        plan["actions"] = actions
+        plan["cost"] = 4.0
+        return plan
+
+    # noinspection PyUnusedLocal
+    def plan_this_single_goal(self, goal_statement):
+        if self.plan_exception:
+            raise Exception()
+        if self.failing_plans:
+            return dict()
+        plan = dict()
+        actions = dict()
+        actions[0] = "BehaviourBase"
+        actions[1] = "DelegationBehaviour2"
+        plan["actions"] = actions
+        plan["cost"] = self.plan["cost"]
+        return plan
 
     @property
     def prefix(self):
         return self._prefix
+
+
+class MockedBehaviour(object):
+
+    def __init__(self, name, b_type):
+        self.name = name
+        self.behaviour_type = b_type
