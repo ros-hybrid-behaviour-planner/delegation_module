@@ -4,6 +4,7 @@ string goal_name
 uint32 auction_id
 float64 old_proposal
 uint32 depth
+string[] current_members
 ---
 bool acceptance
 bool still_biding

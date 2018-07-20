@@ -195,6 +195,7 @@ class DelegationManager(object):
         goal_representation = request.goal_representation
         goal_name = request.goal_name
         depth = request.depth
+        members = request.current_members
 
         self.__loginfo(str(auctioneer_name) + " sent a precommit for his auction " + str(auction_id))
 
@@ -216,7 +217,13 @@ class DelegationManager(object):
             return response
 
         try:
-            new_cost, possible_goal = self.__cost_function_evaluator.compute_cost_and_possibility(goal_representation=goal_representation, current_task_count=len(self.__tasks),  max_task_count=self.__max_tasks, current_depth=depth, max_depth=self.MAX_DELEGATION_DEPTH)
+            new_cost, possible_goal = self.__cost_function_evaluator.compute_cost_and_possibility(goal_representation=goal_representation,
+                                                                                                  current_task_count=len(self.__tasks),
+                                                                                                  max_task_count=self.__max_tasks,
+                                                                                                  current_depth=depth,
+                                                                                                  max_depth=self.MAX_DELEGATION_DEPTH,
+                                                                                                  members=members,
+                                                                                                  own_name=self._name)
             if possible_goal:
                 s = "possible with a cost of " + str(new_cost)
             else:
@@ -335,6 +342,7 @@ class DelegationManager(object):
         auction_id = msg.auction_id
         goal_representation = msg.goal_representation
         depth = msg.depth
+        members = msg.current_members
 
         if auctioneer_name == self._name:
             # Do not bid this way for own auctions!
@@ -354,7 +362,13 @@ class DelegationManager(object):
             return
 
         try:
-            cost, possible_goal = self.__cost_function_evaluator.compute_cost_and_possibility(goal_representation=goal_representation, current_task_count=len(self.__tasks),  max_task_count=self.__max_tasks, current_depth=depth, max_depth=self.MAX_DELEGATION_DEPTH)
+            cost, possible_goal = self.__cost_function_evaluator.compute_cost_and_possibility(goal_representation=goal_representation,
+                                                                                              current_task_count=len(self.__tasks),
+                                                                                              max_task_count=self.__max_tasks,
+                                                                                              current_depth=depth,
+                                                                                              max_depth=self.MAX_DELEGATION_DEPTH,
+                                                                                              members=members,
+                                                                                              own_name=self._name)
             if possible_goal:
                 s = "possible with a cost of " + str(cost)
             else:
@@ -401,7 +415,7 @@ class DelegationManager(object):
             self.__logwarn("Propose call failed")
             raise DelegationServiceError("Call failed: " + str(service_name))
 
-    def __send_precom(self, target_name, auction_id, proposal_value, goal_representation, goal_name, depth):
+    def __send_precom(self, target_name, auction_id, proposal_value, goal_representation, goal_name, depth, delegation_members):
         """
         Calls the Precommit service of the winning bidder of this delegation
 
@@ -425,7 +439,7 @@ class DelegationManager(object):
 
         try:
             send_precom = rospy.ServiceProxy(service_name, Precommit)
-            response = send_precom(goal_representation, self._name, goal_name, auction_id, proposal_value, depth)
+            response = send_precom(goal_representation, self._name, goal_name, auction_id, proposal_value, depth, delegation_members)
         except rospy.ServiceException:
             self.__logwarn("Precommit call failed")
             raise DelegationServiceError("Call failed: " + str(service_name))
@@ -457,7 +471,7 @@ class DelegationManager(object):
             self.__logwarn("Failure call failed")
             raise DelegationServiceError("Call failed: " + str(service_name))
 
-    def __send_cfp(self, goal_representation, auction_id, depth):
+    def __send_cfp(self, goal_representation, auction_id, depth, delegation_members):
         """
         Sends a CFP-broadcast over the CFP-topic
 
@@ -473,6 +487,7 @@ class DelegationManager(object):
         msg.name = self._name
         msg.auction_id = auction_id
         msg.depth = depth
+        msg.current_members = delegation_members
 
         try:
             self._cfp_publisher.publish(msg)
@@ -655,6 +670,13 @@ class DelegationManager(object):
 
         return self._name
 
+    def get_current_employers(self):
+        employers = list()
+        for t in self.__tasks:
+            employers.extend(t.employers)
+
+        return list(set(employers))
+
     # ------ Make auctions etc ------
 
     def __precom(self, proposal, delegation):
@@ -673,11 +695,16 @@ class DelegationManager(object):
         else:
             depth = delegation.depth + 1
 
+        employers = self.get_current_employers()
+        employers.append(self._name)
+        delegation_members = list(set(employers))
+
         response = self.__send_precom(target_name=proposal.get_name(),
                                       auction_id=delegation.get_auction_id(),
                                       goal_name=delegation.get_goal_name(),
                                       proposal_value=proposal.get_value(),
                                       goal_representation=delegation.get_goal_representation(),
+                                      delegation_members=delegation_members,
                                       depth=depth)
         return response
 
@@ -700,9 +727,13 @@ class DelegationManager(object):
         auction_id = delegation.get_auction_id()
         goal_representation = delegation.get_goal_representation()
 
+        employers = self.get_current_employers()
+        employers.append(self._name)
+        delegation_members = list(set(employers))
+
         self.__loginfo("Starting auction with ID: " + str(auction_id))
         try:
-            self.__send_cfp(goal_representation=goal_representation, auction_id=auction_id, depth=depth)
+            self.__send_cfp(goal_representation=goal_representation, auction_id=auction_id, depth=depth, delegation_members=delegation_members)
         except DelegationServiceError as e:
             self.__logwarn("CFP was not sent right (error_message:\"" + str(e.message) + "\")")
             # restart auction next step by ending it than (it will restart,
