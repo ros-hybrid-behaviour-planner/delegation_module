@@ -31,7 +31,8 @@ class DelegationManager(object):
     cfp_topic_name = "CFP_Topic"
 
     # should be configured according to system specs
-    SERVICE_TIMEOUT = 2
+    SERVICE_TIMEOUT = 2     # in seconds
+    MAX_CONSECUTIVE_TIMEOUTS = 3    # in system steps
 
     # can be configured to prevent loops of delegations or to deep delegations
     # NO DELEGATION will be done by the corresponding instance if this is reached
@@ -916,7 +917,9 @@ class DelegationManager(object):
         if not self._check_depth(depth=depth):
             raise DelegationError("MAX_DELEGATION_DEPTH is reached")
 
-        new = Delegation(goal_wrapper=goal_wrapper, auction_id=self.get_new_auction_id(), auction_steps=auction_steps, client_id=client_id, depth=depth)
+        new = Delegation(goal_wrapper=goal_wrapper, auction_id=self.get_new_auction_id(),
+                         auction_steps=auction_steps, client_id=client_id, depth=depth,
+                         max_timeout_steps=self.MAX_CONSECUTIVE_TIMEOUTS)
 
         self.__delegations.append(new)
         self.__start_auction(delegation=new)
