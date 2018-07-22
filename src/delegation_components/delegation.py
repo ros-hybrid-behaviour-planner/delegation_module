@@ -9,7 +9,7 @@ class Delegation(object):
     It contains all necessary information about this delegation.
     """
 
-    def __init__(self, goal_wrapper, auction_id, client_id, depth=0, auction_steps=3):
+    def __init__(self, goal_wrapper, auction_id, client_id, depth=0, auction_steps=3, max_timeout_steps=3):
         """
         Constructor of an instance of Delegation
 
@@ -31,6 +31,8 @@ class Delegation(object):
         self.__got_contractor = False
         self.state = DelegationState()
         self.__depth = depth
+        self.__max_timeout_steps = max_timeout_steps
+        self.__timeout_steps = 0
 
     def __del__(self):
         """
@@ -290,7 +292,16 @@ class Delegation(object):
 
     def check_if_alive(self):
 
-        return self.__goal_wrapper.check_if_still_alive()
+        if self.__goal_wrapper.check_if_still_alive():
+            self.__timeout_steps = 0
+            return True
+
+        self.__timeout_steps += 1
+
+        if self.__timeout_steps >= self.__max_timeout_steps:
+            return False
+        else:
+            return True
 
     def terminate_contract(self):
         """

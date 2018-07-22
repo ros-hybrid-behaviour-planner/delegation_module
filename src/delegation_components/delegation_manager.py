@@ -813,11 +813,12 @@ class DelegationManager(object):
                 break
 
             elif response.still_biding:
-                self.__loginfo(str(bidder_name) + " has given a new proposal of " + str(response.new_proposal) + " for my auction " + str(
-                    auction_id))
+                self.__loginfo(str(bidder_name) + " has given a new proposal of " + str(response.new_proposal)
+                               + " for my auction " + str(auction_id))
                 delegation.remove_proposal(proposal=best_proposal)
                 if best_proposal.get_value() >= response.new_proposal:
-                    self.__logwarn("The new proposal is not worse than the old proposal while he is not accepting the old proposal, something is off!\nWont add this new proposal to be saved")
+                    self.__logwarn("The new proposal is not worse than the old proposal while he is not accepting the old proposal,"
+                                   + " something is off!\nWont add this new proposal just to be safe")
                     continue
                 try:
                     delegation.add_proposal(proposal=Proposal(bidder_name, response.new_proposal))
@@ -964,6 +965,9 @@ class DelegationManager(object):
 
         for delegation in running_delegations:
             if not delegation.check_if_alive():
+                self.__logwarn("Too many TIMEOUTS for the contractor \""+str(delegation.get_contractor())
+                               + "\" of the auction with the ID "+str(delegation.get_auction_id())
+                               + "! Will try to find a new contractor.")
                 contractor_name = delegation.get_contractor()
                 delegation.forbid_bidder(name=contractor_name)
                 delegation.fail_current_delegation()  # unregisters goal
