@@ -9,7 +9,7 @@ class Delegation(object):
     It contains all necessary information about this delegation.
     """
 
-    def __init__(self, goal_wrapper, auction_id, client_id, depth=0, auction_steps=3, max_timeout_steps=3):
+    def __init__(self, goal_wrapper, auction_id, client_id, depth=0, auction_steps=1, max_timeout_steps=2):
         """
         Constructor of an instance of Delegation
 
@@ -66,7 +66,7 @@ class Delegation(object):
         if self.__auction_steps > 0:
             self.__auction_steps -= 1
 
-        return self.__auction_steps == 0
+        return self.__auction_steps <= 0
 
     def end_auction_next_step(self):
         """

@@ -38,6 +38,7 @@ class DelegationManager(object):
     # NO DELEGATION will be done by the corresponding instance if this is reached
     # Set this to 0 or lower if no boundary is needed
     MAX_DELEGATION_DEPTH = 5
+    DEFAULT_AUCTION_STEPS = 1
 
     # ------ Initiation methods ------
 
@@ -756,7 +757,11 @@ class DelegationManager(object):
 
         up_for_delegation = True
 
-        while delegation.has_proposals() and up_for_delegation:
+        for counter in range(10):
+
+            if not delegation.has_proposals():
+                self.__logwarn("Auction with ID " + str(auction_id) + " has no proposals")
+                break
 
             try:
                 best_proposal = delegation.get_best_proposal()
@@ -773,7 +778,8 @@ class DelegationManager(object):
                 client_id = delegation.client_id
                 client = DelegationClientBase.get_client(client_id=client_id)
                 client.start_work(delegation_id=delegation.get_auction_id)
-                return
+                up_for_delegation = False
+                break
 
             self.__loginfo("Sending a precommit to " + str(bidder_name) + " who bid " + str(
                 proposed_value) + " for my auction " + str(
@@ -781,12 +787,13 @@ class DelegationManager(object):
 
             try:
                 response = self.__precom(proposal=best_proposal, delegation=delegation)
-                manager_name = response.manager_name
             except DelegationServiceError as e:
                 # if the best bid is not reachable, try next best bid, instead of giving up auction
                 self.__logwarn("Precommit failed, trying next best Bidder if applicable (error_message:\"" + str(e.message) + "\")")
                 delegation.remove_proposal(proposal=best_proposal)
                 continue
+
+            manager_name = response.manager_name
 
             if response.acceptance:
                 self.__loginfo(str(bidder_name) + " has accepted the contract for a cost of " + str(
@@ -817,10 +824,12 @@ class DelegationManager(object):
                 self.__loginfo(str(bidder_name) + " has given a new proposal of " + str(response.new_proposal)
                                + " for my auction " + str(auction_id))
                 delegation.remove_proposal(proposal=best_proposal)
+
                 if best_proposal.get_value() >= response.new_proposal:
                     self.__logwarn("The new proposal is not worse than the old proposal while he is not accepting the old proposal,"
                                    + " something is off!\nWont add this new proposal just to be safe")
                     continue
+
                 try:
                     delegation.add_proposal(proposal=Proposal(bidder_name, response.new_proposal))
                 except Warning:
@@ -832,7 +841,7 @@ class DelegationManager(object):
 
         if up_for_delegation:
             self.__logwarn("No possible contractor has been found for my auction " + str(auction_id))
-            # starting a new delegation (no failure in RHBP possible)
+            # starting a new delegation (real failure is currently not possible
             self.__start_auction(delegation=delegation)
             return False
         else:
@@ -880,7 +889,7 @@ class DelegationManager(object):
             # TODO we would have to retry
             pass
 
-    def delegate(self, goal_wrapper, client_id, auction_steps=3, own_cost=-1, known_depth=None):
+    def delegate(self, goal_wrapper, client_id, auction_steps=None, own_cost=-1, known_depth=None):
         """
         Makes a delegation for the goal and starts an auction for this
         delegation. Adds my own cost as a proposal if wanted.
@@ -906,6 +915,9 @@ class DelegationManager(object):
         :rtype: int
         :raises DelegationError: if the MAX_DELEGATION_DEPTH is reached
         """
+
+        if auction_steps is None:
+            auction_steps = self.DEFAULT_AUCTION_STEPS
 
         if self.depth_checking_possible:
             depth = self.__current_delegation_depth
