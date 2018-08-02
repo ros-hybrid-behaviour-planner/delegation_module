@@ -113,4 +113,15 @@ class GoalWrapperBase(object):
 
         raise NotImplementedError
 
+    @abstractmethod
+    def check_goal_finished(self):
+        """
+        Checks whether the goal is finished or not
+
+        :return: if the goal is finished or not
+        :rtype: bool
+        """
+
+        raise NotImplementedError
+
 
