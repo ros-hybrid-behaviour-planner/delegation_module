@@ -245,7 +245,7 @@ class DelegationClientBase(object):
         raise NotImplementedError
 
     @abstractmethod
-    def delegation_successfull(self, delegation_id):
+    def delegation_successful(self, delegation_id):
         """
         This method will be invoked if the goal_wrapper of the delegation with
         the given delegation id signals that the goal has been fulfilled

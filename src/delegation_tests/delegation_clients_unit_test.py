@@ -2,6 +2,7 @@
 
 from delegation_tests.test_utils import MockedDelegationManager, MockedCostEvaluator
 from delegation_components.delegation_clients import DelegationClientBase
+from delegation_components.delegation_manager import DelegationManager
 import unittest
 
 
@@ -15,6 +16,9 @@ class TestClient(DelegationClientBase):
         return
 
     def start_work(self, delegation_id):
+        return
+
+    def delegation_successful(self, delegation_id):
         return
 
 
@@ -127,7 +131,7 @@ class DelegationClientTest(unittest.TestCase):
         self.assertEqual(del_id, 1)
         self.assertEqual(self.dm.goal_wrapper, goal)
         self.assertEqual(self.dm.own_cost, own_cost)
-        self.assertEqual(self.dm.steps, TestClient.AUCTION_STEPS)
+        self.assertEqual(self.dm.steps, DelegationManager.DEFAULT_AUCTION_STEPS)
         self.assertEqual(self.dm.client_id, uut.id)
         self.assertEqual(self.dm.known_depth, known_depth)
 

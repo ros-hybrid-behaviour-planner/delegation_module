@@ -19,6 +19,9 @@ class GoalWrapper(GoalWrapperBase):
     def check_if_still_alive(self):
         return True
 
+    def check_goal_finished(self):
+        return True
+
 
 class TestGoalWrapper(unittest.TestCase):
 

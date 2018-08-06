@@ -31,12 +31,16 @@ class MockedClient(DelegationClientBase):
     def __init__(self):
         super(MockedClient, self).__init__()
         self.started_working = False
+        self.successful_id = -1
 
     def delegate(self, goal_name):
         raise RuntimeError("MockedClient cant delegate")
 
     def start_work(self, delegation_id):
         self.started_working = True
+
+    def delegation_successful(self, delegation_id):
+        self.successful_id = delegation_id
 
 
 class MockedCostEvaluator(CostEvaluatorBase):
@@ -109,7 +113,7 @@ class MockedDelegationManager(object):
         self.m_name = manager_name
         self.client_id = client_id
 
-    def delegate(self, goal_wrapper, client_id, known_depth, auction_steps=3, own_cost=-1):
+    def delegate(self, goal_wrapper, client_id, known_depth, auction_steps=DelegationManager.DEFAULT_AUCTION_STEPS, own_cost=-1):
         self.goal_wrapper = goal_wrapper
         self.own_cost = own_cost
         self.steps = auction_steps

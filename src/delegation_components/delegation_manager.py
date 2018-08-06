@@ -992,7 +992,7 @@ class DelegationManager(object):
                 delegation.finish_delegation()
                 # TODO signal client, that delegation is over
                 client = DelegationClientBase.get_client(client_id=delegation.client_id)
-                client.delegation_successfull(delegation_id=delegation.get_auction_id())
+                client.delegation_successful(delegation_id=delegation.get_auction_id())
 
         for delegation in waiting_delegations:
             # decrementing the needed steps and checking at the same time
