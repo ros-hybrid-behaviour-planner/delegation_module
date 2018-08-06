@@ -988,6 +988,12 @@ class DelegationManager(object):
                 delegation.fail_current_delegation()  # unregisters goal
                 self.__start_auction(delegation)
 
+            if delegation.check_if_goal_finished():
+                delegation.finish_delegation()
+                # TODO signal client, that delegation is over
+                client = DelegationClientBase.get_client(client_id=delegation.client_id)
+                client.delegation_successfull(delegation_id=delegation.get_auction_id())
+
         for delegation in waiting_delegations:
             # decrementing the needed steps and checking at the same time
             if delegation.decrement_and_check_steps():

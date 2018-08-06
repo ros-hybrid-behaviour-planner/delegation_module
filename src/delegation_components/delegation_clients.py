@@ -244,6 +244,25 @@ class DelegationClientBase(object):
 
         raise NotImplementedError
 
+    @abstractmethod
+    def delegation_successfull(self, delegation_id):
+        """
+        This method will be invoked if the goal_wrapper of the delegation with
+        the given delegation id signals that the goal has been fulfilled
+        completely
+
+        Here can be done work, if work is needed after a successfull delegation,
+        else just make it pass
+
+        Needs to be overridden!
+
+        :param delegation_id: ID of the delegation that was successful
+        :type delegation_id: int
+        :return: None
+        """
+
+        raise NotImplementedError
+
     # ------ Properties -------
 
     @property

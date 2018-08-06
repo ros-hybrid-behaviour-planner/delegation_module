@@ -260,6 +260,16 @@ class Delegation(object):
 
         self.__goal_wrapper.terminate_goal()
 
+    def check_if_goal_finished(self):
+        """
+        Checks whether the goal is finished or not
+
+        :return: whether the goal is finished or not
+        :rtype: bool
+        """
+
+        self.__goal_wrapper.check_goal_finished()
+
     # Contracting
 
     def start_auction(self):
