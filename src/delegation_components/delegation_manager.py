@@ -989,8 +989,8 @@ class DelegationManager(object):
                 self.__start_auction(delegation)
 
             if delegation.check_if_goal_finished():
+                self.__loginfo("Delegation with ID "+str(delegation.get_auction_id())+" was successful")
                 delegation.finish_delegation()
-                # TODO signal client, that delegation is over
                 client = DelegationClientBase.get_client(client_id=delegation.client_id)
                 client.delegation_successful(delegation_id=delegation.get_auction_id())
 

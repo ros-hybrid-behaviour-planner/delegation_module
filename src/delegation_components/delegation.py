@@ -268,7 +268,7 @@ class Delegation(object):
         :rtype: bool
         """
 
-        self.__goal_wrapper.check_goal_finished()
+        return self.__goal_wrapper.check_goal_finished()
 
     # Contracting
 
