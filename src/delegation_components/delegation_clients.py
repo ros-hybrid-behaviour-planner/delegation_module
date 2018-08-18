@@ -209,7 +209,8 @@ class DelegationClientBase(object):
         Tries to delegate a goal with given parameters
 
         Creates a suiting GoalWrapper and invokes delegate_goal_wrapper with
-        this goal wrapper
+        this goal wrapper, also determines needed parameters like the
+        known depth or the own_cost, if applicable
 
         Needs to be overridden!
 
