@@ -919,10 +919,10 @@ class DelegationManager(object):
         if auction_steps is None:
             auction_steps = self.DEFAULT_AUCTION_STEPS
 
-        if self.depth_checking_possible:
-            depth = self.__current_delegation_depth
-        elif known_depth is not None:
+        if known_depth is not None:
             depth = known_depth
+        elif self.depth_checking_possible:
+            depth = self.__current_delegation_depth
         else:
             depth = -1
 
