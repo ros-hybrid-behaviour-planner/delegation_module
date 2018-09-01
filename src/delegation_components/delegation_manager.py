@@ -32,7 +32,7 @@ class DelegationManager(object):
 
     # should be configured according to system specs
     SERVICE_TIMEOUT = 2     # in seconds
-    MAX_CONSECUTIVE_TIMEOUTS = 3    # in system steps
+    MAX_CONSECUTIVE_TIMEOUTS = 2    # in system steps
 
     # can be configured to prevent loops of delegations or to deep delegations
     # NO DELEGATION will be done by the corresponding instance if this is reached
