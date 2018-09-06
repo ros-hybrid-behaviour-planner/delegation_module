@@ -1,4 +1,8 @@
+"""
+Unit tests for DelegationClient
 
+@author: Mengers
+"""
 
 from delegation_tests.test_utils import MockedDelegationManager, MockedCostEvaluator
 from delegation_components.delegation_clients import DelegationClientBase
@@ -33,11 +37,18 @@ class AdditionalTestDelegationManager(object):
 
 
 class DelegationClientTest(unittest.TestCase):
+    """
+    Unit test for the DelegationClient
+    """
 
     def setUp(self):
         self.dm = MockedDelegationManager()
 
     def test_construction(self):
+        """
+        Tests constructor
+        """
+
         uut = TestClient()
 
         self.assertEqual(DelegationClientBase.instance_counter, 1)
@@ -45,6 +56,10 @@ class DelegationClientTest(unittest.TestCase):
         self.assertEqual(uut, DelegationClientBase.get_client(client_id=uut.id))
 
     def test_registering(self):
+        """
+        Tests DelegationManager registering
+        """
+
         uut = TestClient()
 
         self.assertFalse(uut._active_manager)
@@ -59,6 +74,10 @@ class DelegationClientTest(unittest.TestCase):
         self.assertEqual(uut._delegation_manager, self.dm)
 
     def test_unregistering(self):
+        """
+        Tests DelegationManager unregistering
+        """
+
         uut = TestClient()
 
         uut.unregister()    # should not raise an exception
@@ -81,6 +100,10 @@ class DelegationClientTest(unittest.TestCase):
         self.assertEqual(len(self.dm.clients), 0)
 
     def test_cost_evaluator(self):
+        """
+        Tests CostEvaluator adding
+        """
+
         uut = TestClient()
 
         manager = "test_manager"
@@ -94,6 +117,10 @@ class DelegationClientTest(unittest.TestCase):
         self.assertEqual(self.dm.client_id, uut.id)
 
     def test_steps(self):
+        """
+        Tests do_step
+        """
+
         uut = TestClient()
         delegations = [2, 3, 5]
 
@@ -106,6 +133,10 @@ class DelegationClientTest(unittest.TestCase):
         self.assertEqual(self.dm.stepped, delegations)
 
     def test_goal_removal(self):
+        """
+        Tests goal removal
+        """
+
         uut = TestClient()
         goal = "TestGoal"
 
@@ -117,6 +148,10 @@ class DelegationClientTest(unittest.TestCase):
         self.assertEqual([True, goal], self.dm.task_ended)
 
     def test_delegation(self):
+        """
+        Tests delegate_goal_wrapper
+        """
+
         uut = TestClient()
         goal = "TestGoal"
         own_cost = 5
@@ -136,6 +171,10 @@ class DelegationClientTest(unittest.TestCase):
         self.assertEqual(self.dm.known_depth, known_depth)
 
     def test_terminations(self):
+        """
+        Tests termination functions
+        """
+
         uut = TestClient()
         delegations = [1, 2, 3]
 

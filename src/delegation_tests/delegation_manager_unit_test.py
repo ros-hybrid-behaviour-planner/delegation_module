@@ -1,6 +1,14 @@
+#! /usr/bin/env python2
+"""
+Unit tests for the DelegationManager
+
+Needs a running ROSCORE!
+
+@author: Mengers
+"""
+
 import unittest
 import rospy
-
 from delegation_tests.test_utils import MockedDelegationCommunicator, MockedCostEvaluator, MockedGoalWrapper, MockedClient
 from delegation_components.delegation_manager import DelegationManager
 from delegation_components.task import Task
@@ -9,6 +17,9 @@ from delegation_components.delegation import Delegation
 
 
 class DelegationManagerTest(unittest.TestCase):
+    """
+    Unit tests for the DelegationManager
+    """
 
     def setUp(self):
         rospy.init_node(name="TestNode")
@@ -29,12 +40,24 @@ class DelegationManagerTest(unittest.TestCase):
         self.uut.__del__()
 
     def new_uut(self, max_tasks=1):
+        """
+        Deletes old Unit under Test, UUT, and creates a new one
+        :param max_tasks: max tasks of the DelegationManager
+        :type max_tasks: int
+        :return: uut
+        :rtype: DelegationManager
+        """
+
         self.uut.__del__()
         uut = DelegationManager(instance_name=self.uut_name, max_tasks=max_tasks)
         self.uut = uut
         return uut
 
     def test_setter_getter(self):
+        """
+        Tests the properties
+        """
+
         uut = self.new_uut()
 
         self.assertEqual(uut.get_name(), self.uut_name)
@@ -42,6 +65,10 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertEqual(uut.get_new_auction_id(), curr_id + 1)
 
     def test_multiple_tasks(self):
+        """
+        Tests adding tasks
+        """
+
         id1, id2 = 1, 2
         n1, n2 = "name1", "name2"
         g1, g2 = "goal1", "goal2"
@@ -84,6 +111,10 @@ class DelegationManagerTest(unittest.TestCase):
         uut.__del__()
 
     def test_cfp_callback(self):
+        """
+        Tests CFP callback
+        """
+
         uut = self.new_uut()
 
         auction_id = 1
@@ -114,6 +145,10 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertFalse(self.mocked_DM.got_pro)
 
     def test_delegate(self):
+        """
+        Tests delegate
+        """
+
         uut = self.new_uut()
         goal_name = "test goal"
         test_goal = MockedGoalWrapper(name=goal_name)
@@ -135,6 +170,10 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertEqual(delegation.client_id, self.mocked_client_id)
 
     def test_propose_callback(self):
+        """
+        Tests PROPOSE callback
+        """
+
         uut = self.new_uut()
         goal_name = "test_goal"
         test_goal = MockedGoalWrapper(name=goal_name)
@@ -153,6 +192,10 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertEqual(proposal.get_value(), proposed_value)
 
     def test_ending_auctions(self):
+        """
+        Tests the Ending of auctions
+        """
+
         uut = self.new_uut()
         goal_name = "test_goal"
         test_goal = MockedGoalWrapper(name=goal_name)
@@ -248,6 +291,10 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertTrue(self.mocked_client.started_working)
 
     def test_terminate(self):
+        """
+        Tests terminate
+        """
+
         uut = self.new_uut()
         goal_name = "test_goal"
         test_goal = MockedGoalWrapper(name=goal_name)
@@ -273,6 +320,10 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertTrue(delegation.state.is_finished())
 
     def test_precom_callback(self):
+        """
+        Tests PRECOM callback
+        """
+
         auction_id = 1
         goal_name = "test_goal"
         old_proposal = 3
@@ -316,6 +367,10 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertEqual(response.manager_name, self.uut_mocked_manager_name)
 
     def test_cost_function_adding_removing(self):
+        """
+        Tests CostEvaluator adding/removing
+        """
+
         uut = self.new_uut()
         uut.set_cost_function_evaluator(cost_function_evaluator=self.mocked_cost_eval, manager_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)
         self.assertTrue(uut.cost_computable)
@@ -323,6 +378,10 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertFalse(uut.cost_computable)
 
     def test_fail_task(self):
+        """
+        Tests FAIL callback
+        """
+
         uut = self.new_uut()
         auction_id = 1
         goal_name = "test goal"
@@ -337,6 +396,10 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertEqual(request.auction_id, auction_id)
 
     def test_end_task(self):
+        """
+        Tests end task
+        """
+
         uut = self.new_uut()
         auction_id = 1
         goal_name = "test goal"

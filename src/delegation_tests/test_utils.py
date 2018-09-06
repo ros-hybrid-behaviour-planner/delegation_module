@@ -1,4 +1,9 @@
+"""
+This File contains classes that are used to mock different objects of the
+package. Theses mocked objects are used for testing purposes.
 
+@author: Mengers
+"""
 
 import rospy
 from delegation_components.delegation_clients import DelegationClientBase
@@ -8,25 +13,12 @@ from task_decomposition_module.srv import Precommit, PrecommitResponse, \
     Propose, ProposeResponse, Failure, FailureResponse
 from delegation_components.cost_evaluators import CostEvaluatorBase
 from delegation_components.goal_wrappers import GoalWrapperBase
-from copy import copy
-
-
-"""
-This File just contains classes that are used to mock different objects of the
-package, used by tests.
-"""
-
-
-class FunctionPointerTester(object):
-
-    def __init__(self):
-        self.function_called = False
-
-    def function(self):
-        self.function_called = True
 
 
 class MockedClient(DelegationClientBase):
+    """
+    Mocked DelegationClient
+    """
 
     def __init__(self):
         super(MockedClient, self).__init__()
@@ -34,6 +26,13 @@ class MockedClient(DelegationClientBase):
         self.successful_id = -1
 
     def delegate(self, goal_name):
+        """
+        NOT IMPLEMENTED
+
+        Will raise a RuntimeError
+        :raises RuntimeError: always
+        """
+
         raise RuntimeError("MockedClient cant delegate")
 
     def start_work(self, delegation_id):
@@ -44,6 +43,9 @@ class MockedClient(DelegationClientBase):
 
 
 class MockedCostEvaluator(CostEvaluatorBase):
+    """
+    Mocked CostEvaluator
+    """
 
     def __init__(self, cost, possibility):
         super(MockedCostEvaluator, self).__init__()
@@ -52,11 +54,21 @@ class MockedCostEvaluator(CostEvaluatorBase):
 
     # noinspection PyUnusedLocal
     def compute_cost_and_possibility(self, goal_representation, current_task_count, max_task_count, current_depth, max_depth, members, own_name):
+        """
+        Returns the cost and possibility set at construction, parameters do not
+        matter
+
+        :return: set cost, possibility
+        :rtype: float, bool
+        """
 
         return self._last_cost, self._last_possibility
 
 
 class MockedGoalWrapper(GoalWrapperBase):
+    """
+    Mocked GoalWrapper
+    """
 
     def __init__(self, name):
         super(MockedGoalWrapper, self).__init__(name=name)
@@ -67,6 +79,13 @@ class MockedGoalWrapper(GoalWrapperBase):
         self._created_goal = True
 
     def get_manager(self):
+        """
+        Returns the name set at construction
+
+        :return: set manager_name
+        :rtype: str
+        """
+
         return self._manager_name
 
     def terminate_goal(self):
@@ -76,13 +95,30 @@ class MockedGoalWrapper(GoalWrapperBase):
         return self._name
 
     def check_if_still_alive(self):
+        """
+        Returns always True
+
+        :return: True
+        :rtype: bool
+        """
+
         return True
 
     def check_goal_finished(self):
+        """
+        Returns always True
+
+        :return: True
+        :rtype: bool
+        """
+
         return True
 
 
 class MockedDelegationManager(object):
+    """
+    Mocked DelegationManager without ros communication
+    """
 
     def __init__(self):
         self._name = "test_name"
@@ -114,6 +150,13 @@ class MockedDelegationManager(object):
         self.client_id = client_id
 
     def delegate(self, goal_wrapper, client_id, known_depth, auction_steps=DelegationManager.DEFAULT_AUCTION_STEPS, own_cost=-1):
+        """
+        Mocked delegate
+
+        :return: delegation id of 1
+        :rtype: int
+        """
+
         self.goal_wrapper = goal_wrapper
         self.own_cost = own_cost
         self.steps = auction_steps
@@ -132,6 +175,13 @@ class MockedDelegationManager(object):
 
     @property
     def depth_checking_possible(self):
+        """
+        Returns True
+
+        :return: True
+        :rtype: bool
+        """
+
         return True
 
     def start_depth_service(self, prefix):
@@ -139,8 +189,19 @@ class MockedDelegationManager(object):
 
 
 class MockedDelegationCommunicator(object):
+    """
+    Mocks the ROS communication of the DelegationManager
+    """
 
     def __init__(self, name, manager_name):
+        """
+        Constructor, starts Topics
+
+        Services hve to be started separately
+        :param name: used name of this "DelegationManager"
+        :param manager_name: used name of agent
+        """
+
         self._name = name
         self._manager_name = manager_name
         self._service_prefix = manager_name + '/'
@@ -166,20 +227,23 @@ class MockedDelegationCommunicator(object):
         self.got_cfp = False
 
     def start_communication(self):
+        """
+        Starts all Services
+        """
+
         self._precom_service = rospy.Service(name=self._name + DelegationManager.precom_suffix, service_class=Precommit, handler=self.__precom_callback)
         self._propose_service = rospy.Service(name=self._name + DelegationManager.propose_suffix, service_class=Propose, handler=self.__propose_callback)
         self._failure_service = rospy.Service(name=self._name + DelegationManager.failure_suffix, service_class=Failure, handler=self.__failure_callback)
 
     def __del__(self):
-        """
-        Destructor for the DelegationManager
-        """
-
         self.stop_communication()
         self._cfp_publisher.unregister()
         self._cfp_subscriber.unregister()
 
     def stop_communication(self):
+        """
+        Terminates all services
+        """
 
         self._precom_service.shutdown()
         self._propose_service.shutdown()
@@ -270,7 +334,15 @@ class MockedDelegationCommunicator(object):
 
         self._cfp_publisher.publish(msg)
 
+    #
+    #   Different Message interaction
+    #
+
     def reset_messages(self):
+        """
+        Resets message received values
+        """
+
         # Precom
         self.Pre_last = None
         self.got_pre = False
@@ -285,63 +357,13 @@ class MockedDelegationCommunicator(object):
         self.got_cfp = False
 
     def set_precom_response(self, acceptance, still_bidding, cost):
+        """
+        Sets sent PRECOM answer on PRECOM call
+        :param acceptance: acceptance
+        :param still_bidding: still_bidding
+        :param cost: cost
+        """
+
         self.PAcceptance = acceptance
         self.PBidding = still_bidding
         self.PNewCost = cost
-
-
-class MockedManager(object):
-
-    def __init__(self):
-        self._prefix = "test_prefix"
-        self.plan = dict()
-        self.actions = dict()
-        self.actions[0] = "DelegationBehaviour"
-        self.actions[1] = "BehaviourBase"
-        self.plan["actions"] = self.actions
-        self.plan["cost"] = 2.0
-        b1 = MockedBehaviour(name="DelegationBehaviour", b_type="Delegation")
-        b2 = MockedBehaviour(name="BehaviourBase", b_type="Base")
-        b3 = MockedBehaviour(name="DelegationBehaviour2", b_type="Delegation")
-        self.behaviours = [b1, b2, b3]
-        self.failing_plans = False
-        self.plan_exception = False
-
-    # noinspection PyUnusedLocal
-    def plan_with_additional_goal(self, goal_statement):
-        if self.plan_exception:
-            raise Exception()
-        if self.failing_plans:
-            return dict()
-        plan = dict()
-        actions = copy(self.actions)
-        actions[2] = "DelegationBehaviour2"
-        actions[3] = "BehaviourBase"
-        plan["actions"] = actions
-        plan["cost"] = 4.0
-        return plan
-
-    # noinspection PyUnusedLocal
-    def plan_this_single_goal(self, goal_statement):
-        if self.plan_exception:
-            raise Exception()
-        if self.failing_plans:
-            return dict()
-        plan = dict()
-        actions = dict()
-        actions[0] = "BehaviourBase"
-        actions[1] = "DelegationBehaviour2"
-        plan["actions"] = actions
-        plan["cost"] = self.plan["cost"]
-        return plan
-
-    @property
-    def prefix(self):
-        return self._prefix
-
-
-class MockedBehaviour(object):
-
-    def __init__(self, name, b_type):
-        self.name = name
-        self.behaviour_type = b_type

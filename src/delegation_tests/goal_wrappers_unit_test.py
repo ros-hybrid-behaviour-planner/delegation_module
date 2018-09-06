@@ -1,9 +1,17 @@
-import unittest
+"""
+Unit tests for the GoalWrapper
 
+@author: Mengers
+"""
+
+import unittest
 from delegation_components.goal_wrappers import GoalWrapperBase
 
 
 class GoalWrapper(GoalWrapperBase):
+    """
+    Version of the GoalWrapper without abstract methods
+    """
 
     def get_goal_representation(self):
         return
@@ -24,8 +32,15 @@ class GoalWrapper(GoalWrapperBase):
 
 
 class TestGoalWrapper(unittest.TestCase):
+    """
+    Unit tests for the base functionality of the GoalWrapperBase
+    """
 
     def test_base_functions(self):
+        """
+        Tests base functionality
+        """
+
         test_name = "Test"
         test_goal = "test_goal"
         uut = GoalWrapper(name=test_name)
