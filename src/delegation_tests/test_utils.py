@@ -64,6 +64,9 @@ class MockedCostEvaluator(CostEvaluatorBase):
 
         return self._last_cost, self._last_possibility
 
+    def _plan_and_extract_parameters(self, goal_representation, own_name, members, depth, max_depth, task_count, max_task_count):
+        raise RuntimeError("This should not be used with the MockedCostEvaluator")
+
 
 class MockedGoalWrapper(GoalWrapperBase):
     """
