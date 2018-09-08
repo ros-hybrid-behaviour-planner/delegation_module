@@ -75,11 +75,12 @@ class DelegationManagerTest(unittest.TestCase):
         task1 = Task(auction_id=id1, auctioneer_name=n1, goal_name=g1, depth=self.standard_depth)
         task2 = Task(auction_id=id2, auctioneer_name=n2, goal_name=g2, depth=self.standard_depth)
 
-        # Max Tasks < 0
+        # Max Tasks = -1 (infinite)
         uut = self.new_uut(max_tasks=-1)
-        self.assertFalse(uut.check_possible_tasks())
-        self.assertRaises(DelegationError, uut.add_task, task1)
-        self.assertRaises(LookupError, uut.get_task_by_goal_name, g1)
+        self.assertTrue(uut.check_possible_tasks())
+        uut.add_task(new_task=task2)
+        uut.add_task(new_task=task1)
+        self.assertTrue(uut.check_possible_tasks())
         uut.__del__()
 
         # Max Tasks = 0

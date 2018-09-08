@@ -36,7 +36,7 @@ class DelegationManager(object):
 
     # can be configured to prevent loops of delegations or to deep delegations
     # NO DELEGATION will be done by the corresponding instance if this is reached
-    # Set this to 0 or lower if no boundary is needed
+    # Set this to -1 if no boundary is needed
     MAX_DELEGATION_DEPTH = 5
     DEFAULT_AUCTION_STEPS = 1
 
@@ -50,7 +50,8 @@ class DelegationManager(object):
                 should be unique
         :type instance_name: str
         :param max_tasks: number of maximum tasks that can simultaneously run,
-                set this to 0 for no possible tasks
+                set this to 0 for no possible tasks or -1 for unlimited number
+                of tasks
         :type max_tasks: int
         """
 
@@ -544,10 +545,10 @@ class DelegationManager(object):
         :raises DelegationError: if it cant be added
         """
 
-        if len(self.__tasks) < self.__max_tasks:
-            self.__tasks.append(new_task)
-        else:
+        if len(self.__tasks) >= self.__max_tasks != -1:
             raise DelegationError
+
+        self.__tasks.append(new_task)
 
         self.update_delegation_depth()
 
@@ -609,7 +610,7 @@ class DelegationManager(object):
         :return: whether additional tasks are possible right now
         """
 
-        if len(self.__tasks) >= self.__max_tasks:
+        if len(self.__tasks) >= self.__max_tasks != -1:
             return False
         else:
             return True
@@ -953,7 +954,7 @@ class DelegationManager(object):
         :rtype: bool
         """
 
-        if self.MAX_DELEGATION_DEPTH <= 0:
+        if self.MAX_DELEGATION_DEPTH == -1:
             return True
         if depth < self.MAX_DELEGATION_DEPTH:
             return True
