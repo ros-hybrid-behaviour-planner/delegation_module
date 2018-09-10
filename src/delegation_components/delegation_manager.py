@@ -33,6 +33,7 @@ class DelegationManager(object):
     # should be configured according to system specs
     SERVICE_TIMEOUT = 2     # in seconds
     MAX_CONSECUTIVE_TIMEOUTS = 2    # in system steps
+    MAX_CONSECUTIVE_TRIES = 10
 
     # can be configured to prevent loops of delegations or to deep delegations
     # NO DELEGATION will be done by the corresponding instance if this is reached
@@ -758,7 +759,7 @@ class DelegationManager(object):
 
         up_for_delegation = True
 
-        for counter in range(10):
+        for counter in range(self.MAX_CONSECUTIVE_TRIES):
 
             if not delegation.has_proposals():
                 self.__logwarn("Auction with ID " + str(auction_id) + " has no proposals")
