@@ -8,8 +8,8 @@ package. Theses mocked objects are used for testing purposes.
 import rospy
 from delegation_components.delegation_clients import DelegationClientBase
 from delegation_components.delegation_manager import DelegationManager
-from task_decomposition_module.msg import CFP
-from task_decomposition_module.srv import Precommit, PrecommitResponse, \
+from delegation_module.msg import CFP
+from delegation_module.srv import Precommit, PrecommitResponse, \
     Propose, ProposeResponse, Failure, FailureResponse
 from delegation_components.cost_evaluators import CostEvaluatorBase
 from delegation_components.goal_wrappers import GoalWrapperBase

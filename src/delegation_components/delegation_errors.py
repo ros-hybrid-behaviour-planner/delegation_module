@@ -1,6 +1,6 @@
 class DelegationError(Exception):
     """
-    General Error in the task_decomposition_module
+    General Error in the delegation_module
     """
     pass
 

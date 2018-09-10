@@ -1,8 +1,8 @@
 
 import rospy
 
-from task_decomposition_module.msg import CFP
-from task_decomposition_module.srv import Precommit, PrecommitResponse, \
+from delegation_module.msg import CFP
+from delegation_module.srv import Precommit, PrecommitResponse, \
     Propose, ProposeResponse, Failure, FailureResponse, Get_DepthResponse, Get_Depth
 from delegation_errors import DelegationServiceError, DelegationPlanningWarning, DelegationContractorError, DelegationError
 from delegation import Delegation, Proposal
