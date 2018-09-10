@@ -6,7 +6,7 @@ Abstract CostEvaluator with a default cost_function
 
 from abc import ABCMeta, abstractmethod
 from delegation_errors import DelegationPlanningWarning
-import rospy
+import rospy, sys
 
 
 class CostEvaluatorBase(object):
@@ -84,14 +84,18 @@ class CostEvaluatorBase(object):
         :rtype: float
         """
 
+        # to make sure infinite maximums do not do any harm
+        max_tasks = sys.maxint if parameters.max_task_count < 0 else parameters.max_task_count
+        max_depth = sys.maxint if parameters.max_depth < 0 else parameters.max_depth
+
         task_capacity_utilization = (1 + self.TASK_UTILIZATION_FACTOR *
-                                     float(parameters.task_count) / float(parameters.max_task_count))
+                                     float(parameters.task_count) / float(max_tasks))
         workload_proportion = (1 + self.WORKLOAD_PROPORTION_FACTOR *
                                float(parameters.simple_steps) / float(parameters.full_steps))
         additional_workload = (1 + self.ADDITIONAL_WORKLOAD_FACTOR *
                                float(parameters.base_steps) / float(parameters.full_steps))
         additional_depth = (1 + self.ADDITIONAL_DELEGATION_FACTOR *
-                            float(parameters.new_delegations) * float(parameters.depth) / float(parameters.max_depth))
+                            float(parameters.new_delegations) * float(parameters.depth) / float(max_depth))
         cooperation_amount = (1 + self.COOPERATION_AMOUNT_FACTOR *
                               float(parameters.num_delegations) / float(parameters.simple_steps))
         contractor_number = (1 + self.CONTRACTOR_NUMBER_FACTOR *
