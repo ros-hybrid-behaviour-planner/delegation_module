@@ -9,6 +9,11 @@ from delegation import Delegation, Proposal
 from task import Task
 from goal_wrappers import GoalWrapperBase
 from delegation_clients import DelegationClientBase
+from cost_evaluators import CostEvaluatorBase
+from dynamic_reconfigure.server import Server as ReconfigureServer
+from dynamic_reconfigure.msg import Config as ConfigMsg
+from dynamic_reconfigure import encoding
+from delegation_module.cfg import DelegationManagerConfig
 
 
 class DelegationManager(object):
@@ -28,7 +33,10 @@ class DelegationManager(object):
     propose_suffix = "/propose"
     failure_suffix = "/failure"
     get_depth_suffix = "/get_depth"
+    param_suffix = "/delegation_module_parameters"
     cfp_topic_name = "CFP_Topic"
+
+    dynamic_reconfigure_server = None
 
     # should be configured according to system specs
     SERVICE_TIMEOUT = 2     # in seconds
@@ -58,6 +66,8 @@ class DelegationManager(object):
 
         self._name = instance_name
 
+        self._param_prefix = self._name + DelegationManager.param_suffix
+
         self.__delegations = []
         self.__auction_id = 0
 
@@ -77,6 +87,13 @@ class DelegationManager(object):
 
         self.__init_topics()
         self.__init_services()
+
+        if not DelegationManager.dynamic_reconfigure_server:  # only one server per node
+            DelegationManager.dynamic_reconfigure_server = ReconfigureServer(DelegationManagerConfig, self._dynamic_reconfigure_callback,
+                                                                             namespace="/" + self._param_prefix)
+        else:
+            self.__config_subscriber = rospy.Subscriber(DelegationManager.dynamic_reconfigure_server.ns + 'parameter_updates',
+                                                        ConfigMsg, self._dynamic_reconfigure_listener_callback)
 
         self.__loginfo("Initiation of DelegationManager completed")
 
@@ -167,6 +184,28 @@ class DelegationManager(object):
         rospy.logwarn(str(self._name) + ": " + str(string))
 
     # ------ Callback functions ------
+
+    def _dynamic_reconfigure_listener_callback(self, config_msg):
+        """
+        callback for the dynamic_reconfigure update message
+        :param config_msg: msg
+        """
+
+        config = encoding.decode_config(msg=config_msg)
+
+        self.update_config(config=config)
+
+    def _dynamic_reconfigure_callback(self, config, level):
+        """
+        direct callback of the dynamic_reconfigure server
+        :param config: new config
+        :param level:
+        :return: adjusted config
+        """
+
+        self.update_config(config=config)
+
+        return config
 
     # noinspection PyUnusedLocal
     def __get_depth_callback(self, request):
@@ -518,6 +557,23 @@ class DelegationManager(object):
             raise DelegationServiceError("Call failed: " + str(service_name))
 
     # ------ Simple Getter/Setter for members ------
+
+    def update_config(self, config):
+
+        self.MAX_CONSECUTIVE_TIMEOUTS = config.get("max_consecutive_timeouts", self.MAX_CONSECUTIVE_TIMEOUTS)
+        self.MAX_CONSECUTIVE_TRIES = config.get("max_consecutive_tries", self.MAX_CONSECUTIVE_TRIES)
+        self.MAX_DELEGATION_DEPTH = config.get("max_delegation_depth", self.MAX_DELEGATION_DEPTH)
+        self.DEFAULT_AUCTION_STEPS = config.get("auction_steps", self.DEFAULT_AUCTION_STEPS)
+        self.__max_tasks = config.get("max_tasks", self.__max_tasks)
+
+        self.__loginfo("Parameters updated:" +
+                       "\n\tMAX_CONSECUTIVE_TIMEOUTS\t" + str(self.MAX_CONSECUTIVE_TIMEOUTS) +
+                       "\n\tMAX_CONSECUTIVE_TRIES\t" + str(self.MAX_CONSECUTIVE_TRIES) +
+                       "\n\tMAX_DELEGATION_DEPTH\t" + str(self.MAX_DELEGATION_DEPTH) +
+                       "\n\tAUCTION_STEPS\t\t" + str(self.DEFAULT_AUCTION_STEPS) +
+                       "\n\tMAX_TASKS\t\t" + str(self.__max_tasks))
+
+        self.__loginfo(CostEvaluatorBase.update_config(**config))
 
     def check_remote_depth(self, prefix):
         """

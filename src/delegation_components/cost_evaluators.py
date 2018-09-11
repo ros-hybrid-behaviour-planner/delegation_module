@@ -1,12 +1,13 @@
 """
-Abstract CostEvaluator with a default cost_function
+Abstract CostEvaluator with the default cost_function
 
 @author: Mengers
 """
 
 from abc import ABCMeta, abstractmethod
 from delegation_errors import DelegationPlanningWarning
-import rospy, sys
+import rospy
+import sys
 
 
 class CostEvaluatorBase(object):
@@ -22,6 +23,25 @@ class CostEvaluatorBase(object):
     ADDITIONAL_DELEGATION_FACTOR = 1
     COOPERATION_AMOUNT_FACTOR = 1
     CONTRACTOR_NUMBER_FACTOR = 0.1
+
+    @classmethod
+    def update_config(cls, **kwargs):
+        cls.TASK_UTILIZATION_FACTOR = kwargs.get("task_utilization_factor", cls.TASK_UTILIZATION_FACTOR)
+        cls.WORKLOAD_PROPORTION_FACTOR = kwargs.get("workload_proportion_factor", cls.WORKLOAD_PROPORTION_FACTOR)
+        cls.ADDITIONAL_WORKLOAD_FACTOR = kwargs.get("additional_workload_factor", cls.ADDITIONAL_WORKLOAD_FACTOR)
+        cls.ADDITIONAL_DELEGATION_FACTOR = kwargs.get("additional_delegation_factor", cls.ADDITIONAL_DELEGATION_FACTOR)
+        cls.COOPERATION_AMOUNT_FACTOR = kwargs.get("cooperation_amount_factor", cls.COOPERATION_AMOUNT_FACTOR)
+        cls.CONTRACTOR_NUMBER_FACTOR = kwargs.get("contractor_number_factor", cls.CONTRACTOR_NUMBER_FACTOR)
+
+        log_string = "CostFunction parameters updated:" +\
+                    "\n\tTASK_UTILIZATION_FACTOR\t" + str(cls.TASK_UTILIZATION_FACTOR) +\
+                    "\n\tWORKLOAD_PROPORTION_FACTOR\t" + str(cls.WORKLOAD_PROPORTION_FACTOR) +\
+                    "\n\tADDITIONAL_WORKLOAD_FACTOR\t" + str(cls.ADDITIONAL_WORKLOAD_FACTOR) +\
+                    "\n\tADDITIONAL_DELEGATION_FACTOR\t" + str(cls.ADDITIONAL_DELEGATION_FACTOR) +\
+                    "\n\tCOOPERATION_AMOUNT_FACTOR\t" + str(cls.COOPERATION_AMOUNT_FACTOR) +\
+                    "\n\tCONTRACTOR_NUMBER_FACTOR\t" + str(cls.CONTRACTOR_NUMBER_FACTOR)
+
+        return log_string
 
     def __init__(self):
         """
