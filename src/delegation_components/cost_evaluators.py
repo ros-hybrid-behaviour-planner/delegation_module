@@ -26,6 +26,16 @@ class CostEvaluatorBase(object):
 
     @classmethod
     def update_config(cls, **kwargs):
+        """
+        Updates cost factors for all CostEvaluators on this node
+
+        :param kwargs: dict of factors
+        :type kwargs: dict
+        :return: string that can be used for logging, includes all information
+            about the new factors
+        :rtype: str
+        """
+
         cls.TASK_UTILIZATION_FACTOR = kwargs.get("task_utilization_factor", cls.TASK_UTILIZATION_FACTOR)
         cls.WORKLOAD_PROPORTION_FACTOR = kwargs.get("workload_proportion_factor", cls.WORKLOAD_PROPORTION_FACTOR)
         cls.ADDITIONAL_WORKLOAD_FACTOR = kwargs.get("additional_workload_factor", cls.ADDITIONAL_WORKLOAD_FACTOR)

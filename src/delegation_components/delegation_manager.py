@@ -188,19 +188,25 @@ class DelegationManager(object):
     def _dynamic_reconfigure_listener_callback(self, config_msg):
         """
         callback for the dynamic_reconfigure update message
+
         :param config_msg: msg
+        :type config_msg: DelegationManagerConfig_msg
         """
 
         config = encoding.decode_config(msg=config_msg)
 
         self.update_config(config=config)
 
+    # noinspection PyUnusedLocal
     def _dynamic_reconfigure_callback(self, config, level):
         """
         direct callback of the dynamic_reconfigure server
+
         :param config: new config
-        :param level:
+        :type config: dict
+        :param level: not currently supported
         :return: adjusted config
+        :rtype: dict
         """
 
         self.update_config(config=config)
@@ -559,6 +565,13 @@ class DelegationManager(object):
     # ------ Simple Getter/Setter for members ------
 
     def update_config(self, config):
+        """
+        Updates configuration for this DelegationManager and the CostEvaluators
+        on this node
+
+        :param config: dict with parameters
+        :type config: dict
+        """
 
         self.MAX_CONSECUTIVE_TIMEOUTS = config.get("max_consecutive_timeouts", self.MAX_CONSECUTIVE_TIMEOUTS)
         self.MAX_CONSECUTIVE_TRIES = config.get("max_consecutive_tries", self.MAX_CONSECUTIVE_TRIES)
