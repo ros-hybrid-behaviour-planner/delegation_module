@@ -227,7 +227,7 @@ class DelegationClientBase(object):
         raise NotImplementedError
 
     @abstractmethod
-    def start_work(self, delegation_id):
+    def start_work_for_delegation(self, delegation_id):
         """
         This is needed if own delegation attempts can come back (a own_cost was
         given at delegation_start) and will be invoked if the delegation is won

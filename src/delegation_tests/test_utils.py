@@ -35,7 +35,7 @@ class MockedClient(DelegationClientBase):
 
         raise RuntimeError("MockedClient cant delegate")
 
-    def start_work(self, delegation_id):
+    def start_work_for_delegation(self, delegation_id):
         self.started_working = True
 
     def delegation_successful(self, delegation_id):
@@ -137,6 +137,7 @@ class MockedDelegationManager(object):
         self.steps = None
         self.known_depth = None
         self.start_service_prefix = None
+        self.cost_computable = None
 
     def add_client(self, client_id):
         self.clients.append(client_id)

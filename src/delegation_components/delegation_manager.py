@@ -848,7 +848,7 @@ class DelegationManager(object):
                 # make sure i do the work myself
                 client_id = delegation.client_id
                 client = DelegationClientBase.get_client(client_id=client_id)
-                client.start_work(delegation_id=delegation.get_auction_id())
+                client.start_work_for_delegation(delegation_id=delegation.get_auction_id())
                 up_for_delegation = False
                 break
 

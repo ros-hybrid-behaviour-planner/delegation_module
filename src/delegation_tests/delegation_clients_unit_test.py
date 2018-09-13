@@ -19,7 +19,7 @@ class TestClient(DelegationClientBase):
     def delegate(self, goal_name):
         return
 
-    def start_work(self, delegation_id):
+    def start_work_for_delegation(self, delegation_id):
         return
 
     def delegation_successful(self, delegation_id):
