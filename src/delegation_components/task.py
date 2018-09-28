@@ -1,3 +1,8 @@
+"""
+Task as representation of a Delegation from a different agent
+
+@author: Mengers
+"""
 
 
 class Task(object):
@@ -15,6 +20,10 @@ class Task(object):
         :type auctioneer_name: str
         :param goal_name: name of the corresponding goal (in the RHBP Manager)
         :type goal_name: str
+        :param depth: depth of this task
+        :type depth: int
+        :param employers: all employers (treelike) of this task
+        :type employers: list(str)
         """
 
         self.__goal_name = goal_name
@@ -58,8 +67,22 @@ class Task(object):
 
     @property
     def depth(self):
+        """
+        Current Depth of this task
+
+        :return: depth of this task
+        :rtype: int
+        """
+
         return self.__depth
 
     @property
     def employers(self):
+        """
+        Returns all employers (treelike) of this task
+
+        :return: all employers (treelike) of this task
+        :rtype: list(str)
+        """
+
         return self.__employers

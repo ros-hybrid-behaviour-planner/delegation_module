@@ -1,3 +1,10 @@
+"""
+Diffrent kinds of Exceptions and Warnings used by the DelegationModule
+
+@author: Mengers
+"""
+
+
 class DelegationError(Exception):
     """
     General Error in the delegation_module

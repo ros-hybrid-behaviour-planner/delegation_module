@@ -1,17 +1,22 @@
+"""
+Abstract GoalWrapper
+
+@author: Mengers
+"""
 
 from abc import ABCMeta, abstractmethod
 
 
 class GoalWrapperBase(object):
     """
-    Base class for all GoalWrapper used in this package
+    Abstract Base class for all GoalWrappers
     """
 
     __metaclass__ = ABCMeta
 
     def __init__(self, name):
         """
-        Constructor that initiates all member that are
+        Constructor that initiates all members that are
         needed by all GoalWrappers
 
         :param name: name of the goal
@@ -41,19 +46,6 @@ class GoalWrapperBase(object):
 
         return self._name
 
-    def get_goal(self):
-        """
-        Gets the goal if created or raises an Exception
-
-        :return: instance of the goal of this wrapper
-        :raises RuntimeError: if no goal has been created yet
-        """
-
-        if not self._created_goal:
-            raise RuntimeError("Trying to access a goal, while the goal has not been created")
-        else:
-            return self._goal
-
     def goal_is_created(self):
         """
         Checks if a goal has been created
@@ -63,6 +55,20 @@ class GoalWrapperBase(object):
         """
 
         return self._created_goal
+
+    def get_goal(self):
+        """
+        Gets the goal if created or raises an Exception
+
+        :return: instance of the goal of this wrapper
+        :rtype: Goal
+        :raises RuntimeError: if no goal has been created yet
+        """
+
+        if not self._created_goal:
+            raise RuntimeError("Trying to access a goal, while the goal has not been created")
+        else:
+            return self._goal
 
     @abstractmethod
     def get_goal_representation(self):
@@ -123,5 +129,3 @@ class GoalWrapperBase(object):
         """
 
         raise NotImplementedError
-
-

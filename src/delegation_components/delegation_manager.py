@@ -1,6 +1,10 @@
+"""
+The DelegationManager, the core of the DelegationModule
+
+@author: Mengers
+"""
 
 import rospy
-
 from delegation_module.msg import CFP
 from delegation_module.srv import Precommit, PrecommitResponse, \
     Propose, ProposeResponse, Failure, FailureResponse, Get_DepthResponse, Get_Depth
@@ -20,7 +24,7 @@ class DelegationManager(object):
     """
     This class represents the manager for all delegations of this agent.
     It only communicates with other instances of the DelegationManager,
-    that represent other agents, and the general manager of its own agent.
+    that represent other agents, and different DelegationClients at this agent.
     It handles possible delegations from taking the goal, that could be
     delegated, to making sure a delegated task is accomplished.
 
@@ -51,20 +55,20 @@ class DelegationManager(object):
 
     # ------ Initiation methods ------
 
-    def __init__(self, instance_name="", max_tasks=0):
+    def __init__(self, name="", max_tasks=0):
         """
         Constructor for the DelegationManager
 
-        :param instance_name: name of this instance of the DelegationManager,
+        :param name: name of this instance of the DelegationManager,
                 should be unique
-        :type instance_name: str
+        :type name: str
         :param max_tasks: number of maximum tasks that can simultaneously run,
                 set this to 0 for no possible tasks or -1 for unlimited number
                 of tasks
         :type max_tasks: int
         """
 
-        self._name = instance_name
+        self._name = name
 
         self._param_prefix = self._name + DelegationManager.param_suffix
 
@@ -78,7 +82,7 @@ class DelegationManager(object):
 
         self.__cost_computable = False
         self.__cost_function_evaluator = None
-        self.__registered_manager = ""
+        self.__registered_agent_name = ""
         self.__manager_client_id = 0    # ID of the client of the manager
         self.__active_client_ids = []   # list of client IDs
 
@@ -89,11 +93,14 @@ class DelegationManager(object):
         self.__init_services()
 
         if not DelegationManager.dynamic_reconfigure_server:  # only one server per node
-            DelegationManager.dynamic_reconfigure_server = ReconfigureServer(DelegationManagerConfig, self._dynamic_reconfigure_callback,
+            DelegationManager.dynamic_reconfigure_server = ReconfigureServer(DelegationManagerConfig,
+                                                                             self._dynamic_reconfigure_callback,
                                                                              namespace="/" + self._param_prefix)
         else:
-            self.__config_subscriber = rospy.Subscriber(DelegationManager.dynamic_reconfigure_server.ns + 'parameter_updates',
-                                                        ConfigMsg, self._dynamic_reconfigure_listener_callback)
+            self.__config_subscriber = rospy.Subscriber(DelegationManager.dynamic_reconfigure_server.ns
+                                                        + 'parameter_updates',
+                                                        ConfigMsg,
+                                                        self._dynamic_reconfigure_listener_callback)
 
         self.__loginfo("Initiation of DelegationManager completed")
 
@@ -102,17 +109,27 @@ class DelegationManager(object):
         Initiates needed subscribers and publishers
         """
 
-        self._cfp_publisher = rospy.Publisher(name=self.cfp_topic_name, data_class=CFP, queue_size=10)
-        self._cfp_subscriber = rospy.Subscriber(name=self.cfp_topic_name, data_class=CFP, callback=self.__cfp_callback)
+        self._cfp_publisher = rospy.Publisher(name=self.cfp_topic_name,
+                                              data_class=CFP,
+                                              queue_size=10)
+        self._cfp_subscriber = rospy.Subscriber(name=self.cfp_topic_name,
+                                                data_class=CFP,
+                                                callback=self.__cfp_callback)
 
     def __init_services(self):
         """
         Initiates needed services
         """
 
-        self._precom_service = rospy.Service(name=self._name+self.precom_suffix, service_class=Precommit, handler=self.__precom_callback)
-        self._propose_service = rospy.Service(name=self._name+self.propose_suffix, service_class=Propose, handler=self.__propose_callback)
-        self._failure_service = rospy.Service(name=self._name+self.failure_suffix, service_class=Failure, handler=self.__failure_callback)
+        self._precom_service = rospy.Service(name=self._name+self.precom_suffix,
+                                             service_class=Precommit,
+                                             handler=self.__precom_callback)
+        self._propose_service = rospy.Service(name=self._name+self.propose_suffix,
+                                              service_class=Propose,
+                                              handler=self.__propose_callback)
+        self._failure_service = rospy.Service(name=self._name+self.failure_suffix,
+                                              service_class=Failure,
+                                              handler=self.__failure_callback)
 
         # not started at construction
         self._get_depth_service = None
@@ -121,7 +138,7 @@ class DelegationManager(object):
 
     def __del__(self):
         """
-        Destructor for the DelegationManager
+        Destructor for the DelegationManager, stops topics and services
         """
 
         # fail all current tasks
@@ -187,7 +204,7 @@ class DelegationManager(object):
 
     def _dynamic_reconfigure_listener_callback(self, config_msg):
         """
-        callback for the dynamic_reconfigure update message
+        Callback for the dynamic_reconfigure update message
 
         :param config_msg: msg
         :type config_msg: DelegationManagerConfig_msg
@@ -197,14 +214,14 @@ class DelegationManager(object):
 
         self.update_config(config=config)
 
-    # noinspection PyUnusedLocal
-    def _dynamic_reconfigure_callback(self, config, level):
+    def _dynamic_reconfigure_callback(self, config, _):
         """
-        direct callback of the dynamic_reconfigure server
+        Direct callback of the dynamic_reconfigure server
+
+        Level no currently used
 
         :param config: new config
         :type config: dict
-        :param level: not currently supported
         :return: adjusted config
         :rtype: dict
         """
@@ -213,13 +230,14 @@ class DelegationManager(object):
 
         return config
 
-    # noinspection PyUnusedLocal
-    def __get_depth_callback(self, request):
+    def __get_depth_callback(self, _):
         """
         Returns the current delegation depth of this DelegationManager
 
-        :param request: request of the Get_Depth.srv type (empty)
-        :return: response with the current delegation depth
+        Request is empty
+
+        :return: current depth of this DelegationManager
+        :rtype: Get_DepthResponse
         """
 
         response = Get_DepthResponse()
@@ -235,8 +253,10 @@ class DelegationManager(object):
         accepting the task.
 
         :param request: request of the Precommit.srv type
+        :type request: PrecommitRequest
         :return: response to confirm or take back the old bid and possibly
                 sending a new bid
+        :rtype: PrecommitResponse
         """
 
         auctioneer_name = request.name
@@ -246,7 +266,8 @@ class DelegationManager(object):
         depth = request.depth
         members = request.current_members
 
-        self.__loginfo(str(auctioneer_name) + " sent a precommit for his auction " + str(auction_id))
+        self.__loginfo(str(auctioneer_name) + " sent a precommit for his auction "
+                       + str(auction_id))
 
         # response with initial values, all negative
         response = PrecommitResponse()
@@ -265,31 +286,21 @@ class DelegationManager(object):
             self.__loginfo("Wont bid, because i cannot compute the cost")
             return response
 
-        try:
-            new_cost, possible_goal = self.__cost_function_evaluator.compute_cost_and_possibility(goal_representation=goal_representation,
-                                                                                                  current_task_count=len(self.__tasks),
-                                                                                                  max_task_count=self.__max_tasks,
-                                                                                                  current_depth=depth,
-                                                                                                  max_depth=self.MAX_DELEGATION_DEPTH,
-                                                                                                  members=members,
-                                                                                                  own_name=self._name)
-            if possible_goal:
-                s = "possible with a cost of " + str(new_cost)
-            else:
-                s = "impossible"
-            self.__loginfo("Task is " + s)
-        except DelegationPlanningWarning as e:
-            self.__loginfo("Goal not possible. PlannerMessage: " + str(e.message))
-            new_cost, possible_goal = -1, False
+        new_cost, goal_possible = self._determine_cost_and_possibility(goal_representation=goal_representation,
+                                                                       depth=depth,
+                                                                       members=members)
 
-        if not possible_goal:
+        if not goal_possible:
             self.__loginfo("Earlier proposal can not be verified, goal currently not possible")
             return response
 
         if new_cost <= request.old_proposal:
             self.__loginfo("Have accepted a contract from " + str(auctioneer_name))
 
-            new_task = Task(auction_id=auction_id, auctioneer_name=auctioneer_name, goal_name=goal_name, depth=depth)
+            new_task = Task(auction_id=auction_id,
+                            auctioneer_name=auctioneer_name,
+                            goal_name=goal_name, depth=depth)
+
             try:
                 self.add_task(new_task)
             except DelegationError as e:
@@ -297,10 +308,10 @@ class DelegationManager(object):
                 return response
 
             response.acceptance = True
-            response.manager_name = self.__registered_manager
-
+            response.manager_name = self.__registered_agent_name
         else:
-            self.__loginfo("Earlier proposed cost is lower than new cost:" + str(request.old_proposal) + "<" + str(new_cost))
+            self.__loginfo("Earlier proposed cost is lower than new cost:"
+                           + str(request.old_proposal) + "<" + str(new_cost))
 
         response.still_biding = True
         response.new_proposal = new_cost
@@ -313,14 +324,17 @@ class DelegationManager(object):
         Adds proposal to list of proposals
 
         :param request: request of the Propose.srv type
+        :type request: ProposeRequest
         :return: empty response
+        :rtype: ProposeResponse
         """
 
         bidder_name = request.name
         auction_id = request.auction_id
         proposed_value = request.value
 
-        self.__loginfo(str(bidder_name) + " proposed for my auction " + str(auction_id) + " with " + str(proposed_value))
+        self.__loginfo(str(bidder_name) + " proposed for my auction "
+                       + str(auction_id) + " with " + str(proposed_value))
 
         try:
             delegation = self.get_delegation(auction_id=auction_id)
@@ -333,7 +347,8 @@ class DelegationManager(object):
         try:
             delegation.add_proposal(proposal=new_proposal)
         except Warning:
-            self.__loginfo("Proposal from " + str(bidder_name) + " wont be added, he is forbidden")
+            self.__loginfo("Proposal from " + str(bidder_name)
+                           + " wont be added, he is forbidden")
 
         return ProposeResponse()
 
@@ -345,15 +360,18 @@ class DelegationManager(object):
         accomplish the task
 
         :param request: request of the Failure.srv type
+        :type request: FailureRequest
         :return: empty response
+        :rtype: FailureResponse
         """
 
         contractor_name = request.name
         auction_id = request.auction_id
-
-        self.__loginfo(str(contractor_name) + " reported a FAILURE for my auction " + str(auction_id))
+        self.__loginfo(str(contractor_name) + " reported a FAILURE for my auction "
+                       + str(auction_id))
 
         response = FailureResponse()
+
         try:
             delegation = self.get_delegation(auction_id=auction_id)
         except LookupError:
@@ -370,11 +388,8 @@ class DelegationManager(object):
             self.__logwarn("Failure Message from source who is not its contractor")
             return response
 
-        delegation.forbid_bidder(name=contractor_name)
         delegation.fail_current_delegation()    # unregisters goal
-
         self.__start_auction(delegation)
-
         return response
 
     def __cfp_callback(self, msg):
@@ -385,6 +400,7 @@ class DelegationManager(object):
         if appropriate
 
         :param msg: message of the CFP.msg type
+        :type msg: CFP
         """
 
         auctioneer_name = msg.name
@@ -410,30 +426,50 @@ class DelegationManager(object):
             self.__loginfo("Wont bid, because i cannot compute the cost")
             return
 
+        cost, goal_possible = self._determine_cost_and_possibility(goal_representation=goal_representation,
+                                                                   depth=depth,
+                                                                   members=members)
+
+        if goal_possible:
+            self.__loginfo("Sending a proposal of " + str(cost))
+            try:
+                self.__send_propose(cost, auctioneer_name, auction_id)
+            except DelegationServiceError as e:
+                # Sending of a Proposal is not ultimately important
+                self.__logwarn("Sending of Proposal not working, continuing without (error_message:\""
+                               + str(e.message) + "\")")
+
+    def _determine_cost_and_possibility(self, goal_representation, depth, members):
+        """
+        Determines cost and possibility using the CostEvaluator
+
+        :param goal_representation: representation of the goal
+        :type goal_representation: str
+        :param depth: depth of the goal
+        :type depth: int
+        :param members: list of the current members of the delegation
+        :type members: list(str)
+        :return: Cost and Possibility of the goal
+        :rtype: float, bool
+        """
+
         try:
-            cost, possible_goal = self.__cost_function_evaluator.compute_cost_and_possibility(goal_representation=goal_representation,
+            cost, goal_possible = self.__cost_function_evaluator.compute_cost_and_possibility(goal_representation=goal_representation,
                                                                                               current_task_count=len(self.__tasks),
                                                                                               max_task_count=self.__max_tasks,
                                                                                               current_depth=depth,
                                                                                               max_depth=self.MAX_DELEGATION_DEPTH,
                                                                                               members=members,
                                                                                               own_name=self._name)
-            if possible_goal:
+            if goal_possible:
                 s = "possible with a cost of " + str(cost)
             else:
                 s = "impossible"
             self.__loginfo("Task is " + s)
         except DelegationPlanningWarning as e:
             self.__loginfo("Goal not possible. PlannerMessage: " + str(e.message))
-            cost, possible_goal = -1, False
-
-        if possible_goal:
-            self.__loginfo("Sending a proposal of " + str(cost))
-            try:
-                self.__send_propose(cost, auctioneer_name, auction_id)
-            except DelegationServiceError as e:
-                # Sending of a Proposal is not ultimately important
-                self.__logwarn("Sending of Proposal not working, continuing without (error_message:\"" + str(e.message) + "\")")
+            cost, goal_possible = -1, False
+        return cost, goal_possible
 
     # ------ Message sending methods ------
 
@@ -442,8 +478,11 @@ class DelegationManager(object):
         Sends a Propose service_name call
 
         :param value: proposed cost
+        :type value: float
         :param target_name: name of the auctioneer
+        :type target_name: str
         :param auction_id: ID of the auction
+        :type auction_id: int
         :raises DelegationServiceError: if call failed
         """
 
@@ -464,16 +503,28 @@ class DelegationManager(object):
             self.__logwarn("Propose call failed")
             raise DelegationServiceError("Call failed: " + str(service_name))
 
-    def __send_precom(self, target_name, auction_id, proposal_value, goal_representation, goal_name, depth, delegation_members):
+    def __send_precom(self, target_name, auction_id, proposal_value,
+                      goal_representation, goal_name, depth, delegation_members):
         """
         Calls the Precommit service of the winning bidder of this delegation
 
         :param target_name: name of the bidder who gets the precom
+        :type target_name: str
         :param auction_id: ID of the corresponding auction
+        :type auction_id: int
         :param proposal_value: proposed value
+        :type proposal_value: float
         :param goal_representation: representation of the goal for this auction
+        :type goal_representation: str
+        :param goal_name: name of the goal
+        :type goal_name: str
+        :param depth: current depth of this delegation
+        :type depth: int
+        :param delegation_members: list of current members of the delegation
+        :type delegation_members: list(str)
         :return: response of the service call,
                 includes the acceptance of the bidder or possibly a new proposal
+        :rtype: PrecommitResponse
         :raises DelegationServiceError: if call failed
         """
 
@@ -488,7 +539,9 @@ class DelegationManager(object):
 
         try:
             send_precom = rospy.ServiceProxy(service_name, Precommit)
-            response = send_precom(goal_representation, self._name, goal_name, auction_id, proposal_value, depth, delegation_members)
+            response = send_precom(goal_representation, self._name, goal_name,
+                                   auction_id, proposal_value,
+                                   depth, delegation_members)
         except rospy.ServiceException:
             self.__logwarn("Precommit call failed")
             raise DelegationServiceError("Call failed: " + str(service_name))
@@ -500,11 +553,14 @@ class DelegationManager(object):
         Sends a Failure service-call for the specified name, id
 
         :param auctioneer_name: name of the auctioneer of the failed task
+        :type auctioneer_name: str
         :param auction_id: ID of the failed task
+        :type auction_id: int
         :raises DelegationServiceError: if call failed
         """
 
-        self.__loginfo("Sending a Failure message to " + str(auctioneer_name) + " for his auction " + str(auction_id))
+        self.__loginfo("Sending a Failure message to " + str(auctioneer_name)
+                       + " for his auction " + str(auction_id))
 
         service_name = auctioneer_name + self.failure_suffix
         try:
@@ -525,7 +581,13 @@ class DelegationManager(object):
         Sends a CFP-broadcast over the CFP-topic
 
         :param goal_representation: goal_information
+        :type goal_representation: str
         :param auction_id: ID of the corresponding auction
+        :type auction_id: int
+        :param depth: depth of this delegation
+        :type depth: int
+        :param delegation_members: List of current Members of the Delegation
+        :type delegation_members: list(str)
         :raises ServiceException: if call failed
         """
 
@@ -545,6 +607,16 @@ class DelegationManager(object):
             raise DelegationServiceError("Call failed: CFP")
 
     def __send_get_depth(self, prefix):
+        """
+        Sends a Get_Depth serivce call to the given agent
+
+        :param prefix: prefix for this call
+        :type prefix: str
+        :return: service-response
+        :rtype: Get_DepthResponse
+        :raises DelegationServiceError: if call unsuccessful
+        """
+
         self.__loginfo("Sending a Get_Depth request to " + str(prefix))
 
         service_name = prefix + self.get_depth_suffix
@@ -590,7 +662,7 @@ class DelegationManager(object):
 
     def check_remote_depth(self, prefix):
         """
-        Gets the depth from a remote source with the given service-prefix
+        Gets the depth from a remote source with the given service-agent_name
 
         :param prefix: service-prefix of source from which the depth is to be
                 determined
@@ -603,7 +675,7 @@ class DelegationManager(object):
             response = self.__send_get_depth(prefix=prefix)
             depth = response.depth
         except DelegationServiceError:
-            self.__logwarn("Could not determine the remote depth for "+str(prefix)+" --> will return None")
+            self.__logwarn("Could not determine the remote depth for " + str(prefix) + " --> will return None")
             depth = None
         return depth
 
@@ -612,6 +684,7 @@ class DelegationManager(object):
         Adds the task to the task list if possible
 
         :param new_task: the new task
+        :type new_task: Task
         :raises DelegationError: if it cant be added
         """
 
@@ -622,38 +695,67 @@ class DelegationManager(object):
 
         self.update_delegation_depth()
 
-    def add_client(self, client_id):
-        self.__active_client_ids.append(client_id)
-
     def update_delegation_depth(self):
+        """
+        Updates the depth of this DelegationManager according to current tasks
+        """
+
         if len(self.__tasks) == 0:
             self.__current_delegation_depth = 0
         else:
             self.__current_delegation_depth = max([t.depth for t in self.__tasks])
 
+    def add_client(self, client_id):
+        """
+        Adds the client with the given ID to this DelegationManager
+
+        :param client_id: ID of the client
+        :type client_id: int
+        """
+
+        self.__active_client_ids.append(client_id)
+
     def remove_client(self, client_id):
+        """
+        Removes the client with the given ID
+
+        :param client_id: ID of the client
+        :type client_id: int
+        """
+
         if self.__active_client_ids.__contains__(client_id):
             self.__active_client_ids.remove(client_id)
 
     def start_depth_service(self, prefix):
+        """
+        Starts the Get_Depth service for this Manager with the given prefix
+
+        :param prefix: prefix that should be used, e.g. the name of this agent
+        :type prefix: str
+        """
+
         name = prefix + self.get_depth_suffix
         self._get_depth_service = rospy.Service(name=name, service_class=Get_Depth, handler=self.__get_depth_callback)
 
     def stop_depth_service(self):
+        """
+        Stop the Get_Depth service of this DelegationManager
+        """
+
         if self._get_depth_service is not None:
             self._get_depth_service.shutdown()
             self._get_depth_service = None
 
-    def set_cost_function_evaluator(self, cost_function_evaluator, manager_name, client_id):
+    def set_cost_function_evaluator(self, cost_function_evaluator, agent_name, client_id):
         """
         Adds a cost_function_evaluator, overwrites old evaluator if there is
-        one and makes it possible for the delegation_manager to compute the cost
+        one and makes it possible for the DelegationManager to compute the cost
         of tasks with this evaluator
 
         :param cost_function_evaluator: a working cost_function_evaluator
         :type cost_function_evaluator: CostEvaluatorBase
-        :param manager_name: name of the manager the evaluator is from
-        :type manager_name: str
+        :param agent_name: name of the manager the evaluator is from
+        :type agent_name: str
         :param client_id: ID of the client at this manager
         :type client_id: int
         """
@@ -661,7 +763,7 @@ class DelegationManager(object):
         self.__manager_client_id = client_id
         self.__cost_function_evaluator = cost_function_evaluator
         self.__cost_computable = True
-        self.__registered_manager = manager_name
+        self.__registered_agent_name = agent_name
 
     def remove_cost_function_evaluator(self):
         """
@@ -678,6 +780,7 @@ class DelegationManager(object):
         Checks whether additional tasks are possible right now or not
 
         :return: whether additional tasks are possible right now
+        :rtype: bool
         """
 
         if len(self.__tasks) >= self.__max_tasks != -1:
@@ -691,7 +794,9 @@ class DelegationManager(object):
         there is no delegation with this id
 
         :param auction_id: auction_id of an existing delegation
+        :type auction_id: int
         :return: the relevant delegation
+        :rtype: Delegation
         :raises LookupError: if there is no delegation with this auction_id
         """
 
@@ -707,7 +812,9 @@ class DelegationManager(object):
         Returns a currently running task with the given goal
 
         :param goal_name: name of the goal that the task has
+        :type goal_name: str
         :return: the running task
+        :rtype: Task
         :raises LookupError: if there is no task with that goal
         """
 
@@ -722,6 +829,7 @@ class DelegationManager(object):
         Creates a new auction_id for this instance of the DelegationManager
 
         :return: The new auction_id
+        :rtype: int
         """
 
         self.__auction_id += 1
@@ -729,21 +837,32 @@ class DelegationManager(object):
         # check that the auction_id is usable in ROS msgs/services
         uint32_max = 2**32 - 1
         if self.__auction_id > uint32_max:
-            self.__logwarn("Space for auction IDs is exhausted, starting with 0 again. This could possibly lead to problems!")
+            self.__logwarn("Space for auction IDs is exhausted,"
+                           " starting with 0 again. " 
+                           "This could possibly lead to problems!")
             self.__auction_id = 0
 
         return self.__auction_id
 
     def get_name(self):
         """
-        Gets the manager name
+        Gets the DelegationManager name
 
         :return: name of this delegation manager
+        :rtype: str
         """
 
         return self._name
 
     def get_current_employers(self):
+        """
+        List of current Employers of this DelegationManager according to the
+        current tasks
+
+        :return: list of the employers
+        :rtype: list(str)
+        """
+
         employers = list()
         for t in self.__tasks:
             employers.extend(t.employers)
@@ -759,8 +878,11 @@ class DelegationManager(object):
         Wrapper for the call
 
         :param proposal: the proposal that won
+        :type proposal: Proposal
         :param delegation: the delegation with this proposal
+        :type delegation: Delegation
         :return: response of the call
+        :rtype: PrecommitResponse
         """
 
         if self.depth_checking_possible:
@@ -787,6 +909,7 @@ class DelegationManager(object):
 
         :param delegation: the delegation for which the auction should be
                 started
+        :type delegation: Delegation
         """
 
         # Making sure that the delegation is in the right state
@@ -806,19 +929,23 @@ class DelegationManager(object):
 
         self.__loginfo("Starting auction with ID: " + str(auction_id))
         try:
-            self.__send_cfp(goal_representation=goal_representation, auction_id=auction_id, depth=depth, delegation_members=delegation_members)
+            self.__send_cfp(goal_representation=goal_representation,
+                            auction_id=auction_id,
+                            depth=depth,
+                            delegation_members=delegation_members)
         except DelegationServiceError as e:
             self.__logwarn("CFP was not sent right (error_message:\"" + str(e.message) + "\")")
             # restart auction next step by ending it than (it will restart,
             # because it has no valid proposals than)
             delegation.end_auction_next_step()
 
-    def __end_auction(self, delegation):    # TODO myb clean this up a bit
+    def __end_auction(self, delegation):
         """
         Stops the auction for the given delegation, determines its winner and
         tries to make him the contractor
 
         :param delegation: the delegation of which the auction should end
+        :type delegation: Delegation
         :return: whether it was successfully ended or not (restarted)
         :rtype: bool
         """
@@ -831,20 +958,23 @@ class DelegationManager(object):
         for counter in range(self.MAX_CONSECUTIVE_TRIES):
 
             if not delegation.has_proposals():
-                self.__logwarn("Auction with ID " + str(auction_id) + " has no proposals")
+                self.__logwarn("Auction with ID " + str(auction_id)
+                               + " has no proposals")
                 break
 
             try:
                 best_proposal = delegation.get_best_proposal()
             except LookupError:
-                self.__logwarn("Auction with ID " + str(auction_id) + " has no proposals")
+                self.__logwarn("Auction with ID " + str(auction_id)
+                               + " has no proposals")
                 break
 
             bidder_name = best_proposal.get_name()
             proposed_value = best_proposal.get_value()
 
             if bidder_name == self._name:
-                self.__loginfo("I won my own auction with the ID " + str(auction_id))
+                self.__loginfo("I won my own auction with the ID "
+                               + str(auction_id))
                 # make sure i do the work myself
                 client_id = delegation.client_id
                 client = DelegationClientBase.get_client(client_id=client_id)
@@ -852,24 +982,24 @@ class DelegationManager(object):
                 up_for_delegation = False
                 break
 
-            self.__loginfo("Sending a precommit to " + str(bidder_name) + " who bid " + str(
-                proposed_value) + " for my auction " + str(
-                auction_id))
+            self.__loginfo("Sending a precommit to " + str(bidder_name) +
+                           " who bid " + str(proposed_value) +
+                           " for my auction " + str(auction_id))
 
             try:
                 response = self.__precom(proposal=best_proposal, delegation=delegation)
             except DelegationServiceError as e:
                 # if the best bid is not reachable, try next best bid, instead of giving up auction
-                self.__logwarn("Precommit failed, trying next best Bidder if applicable (error_message:\"" + str(e.message) + "\")")
+                self.__logwarn("Precommit failed, trying next best Bidder if applicable (error_message:\""
+                               + str(e.message) + "\")")
                 delegation.remove_proposal(proposal=best_proposal)
                 continue
 
             manager_name = response.manager_name
 
             if response.acceptance:
-                self.__loginfo(str(bidder_name) + " has accepted the contract for a cost of " + str(
-                    proposed_value) + " for my auction " + str(
-                    auction_id))
+                self.__loginfo(str(bidder_name) + " has accepted the contract for a cost of "
+                               + str(proposed_value) + " for my auction " + str(auction_id))
 
                 try:
                     # set contractor, change delegation state and send goal
@@ -879,7 +1009,8 @@ class DelegationManager(object):
                     up_for_delegation = False
                     break
                 except DelegationError as e:
-                    self.__logwarn("Sending goal was not possible! (error_message:\"" + str(e.message) + "\")")
+                    self.__logwarn("Sending goal was not possible! (error_message:\""
+                                   + str(e.message) + "\")")
 
                     # make sure goal is not living anymore and contractor is removed
                     delegation.terminate_contract()
@@ -932,7 +1063,8 @@ class DelegationManager(object):
         try:
             delegation = self.get_delegation(auction_id=auction_id)
         except LookupError:
-            self.__loginfo("Trying to terminate delegation with the auction id " + str(auction_id) + ", that doesnt exist")
+            self.__loginfo("Trying to terminate delegation with the auction id "
+                           + str(auction_id) + ", that doesnt exist")
             return
 
         delegation.finish_delegation()
@@ -956,8 +1088,7 @@ class DelegationManager(object):
         try:
             self.__send_failure(auctioneer_name=task.get_auctioneer_name(), auction_id=task.get_auction_id())
         except DelegationServiceError as e:
-            self.__logwarn("Failure Message raised following error: "+e.message+"\nWill try again")
-            # TODO we would have to retry
+            rospy.logerr("Failure Message raised following error: "+e.message)
             pass
 
     def delegate(self, goal_wrapper, client_id, auction_steps=None, own_cost=-1, known_depth=None):
@@ -1037,7 +1168,7 @@ class DelegationManager(object):
         Performs a step for all delegations with a given Id
 
         :param delegation_ids: list of IDs of delegations that should be stepped
-        :type delegation_ids: list
+        :type delegation_ids: list(int)
         """
 
         if len(delegation_ids) == 0:
@@ -1055,7 +1186,6 @@ class DelegationManager(object):
                                + "\" of the auction with the ID "+str(delegation.get_auction_id())
                                + "! Will try to find a new contractor.")
                 contractor_name = delegation.get_contractor()
-                delegation.forbid_bidder(name=contractor_name)
                 delegation.fail_current_delegation()  # unregisters goal
                 self.__start_auction(delegation)
 
@@ -1090,10 +1220,23 @@ class DelegationManager(object):
 
     @property
     def depth_checking_possible(self):
+        """
+        Whether Depth checking of this DelegationManager is currently possible
+
+        :return: whether Depth checking is possible
+        :rtype: bool
+        """
 
         # is only given if cost computable
         return self.__cost_computable
 
     @property
     def cost_computable(self):
+        """
+        Whether Cost is currently computable at this DelegationManager
+
+        :return: whether Cost is currently computable at this DelegationManager
+        :rtype: bool
+        """
+
         return self.__cost_computable

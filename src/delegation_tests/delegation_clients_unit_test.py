@@ -62,12 +62,12 @@ class DelegationClientTest(unittest.TestCase):
 
         uut = TestClient()
 
-        self.assertFalse(uut._active_manager)
+        self.assertFalse(uut._manager_active)
 
         uut.register(delegation_manager=self.dm)
         self.assertEqual(self.dm.clients[0], uut.id)
         self.assertEqual(uut._delegation_manager, self.dm)
-        self.assertTrue(uut._active_manager)
+        self.assertTrue(uut._manager_active)
         self.assertTrue(uut.check_if_registered())
 
         uut.register(delegation_manager=AdditionalTestDelegationManager())
@@ -108,10 +108,10 @@ class DelegationClientTest(unittest.TestCase):
 
         manager = "test_manager"
         cost_eval = MockedCostEvaluator(cost=1, possibility=True)
-        uut.add_own_cost_evaluator(cost_evaluator=cost_eval, manager_name=manager)
+        uut.add_own_cost_evaluator(cost_evaluator=cost_eval, agent_name=manager)
 
         uut.register(delegation_manager=self.dm)
-        uut.add_own_cost_evaluator(cost_evaluator=cost_eval, manager_name=manager)
+        uut.add_own_cost_evaluator(cost_evaluator=cost_eval, agent_name=manager)
         self.assertEqual(self.dm.cfe, cost_eval)
         self.assertEqual(self.dm.m_name, manager)
         self.assertEqual(self.dm.client_id, uut.id)

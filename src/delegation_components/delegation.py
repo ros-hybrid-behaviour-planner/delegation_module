@@ -1,3 +1,8 @@
+"""
+Delegation and objects used by it, especially the Proposal
+
+@author: Mengers
+"""
 
 import bisect
 from delegation_errors import DelegationContractorError
@@ -5,19 +10,27 @@ from delegation_errors import DelegationContractorError
 
 class Delegation(object):
     """
-    Class that represents a possible delegation of a goal.
+    Class that represents a possible delegation of a goal at any state.
     It contains all necessary information about this delegation.
     """
 
     def __init__(self, goal_wrapper, auction_id, client_id, depth=0, auction_steps=1, max_timeout_steps=2):
         """
-        Constructor of an instance of Delegation
+        Constructor
 
-        :param auction_steps: steps that are waited for proposals
-        :param goal_wrapper: goal that should be delegated
+        :param goal_wrapper: GoalWrapper for the goal that should be delegated
+        :type goal_wrapper: GoalWrapperBase
         :param auction_id: ID of the delegation/auction
+        :type auction_id: int
         :param client_id: ID of the client that started this delegation
+        :type client_id: int
         :param depth: depth of this delegation
+        :type depth: int
+        :param auction_steps: steps that are waited for proposals
+        :type auction_steps: int
+        :param max_timeout_steps: maximum number of consecutive timeouts for
+                this delegation
+        :type max_timeout_steps: int
         """
 
         self.__goal_wrapper = goal_wrapper
@@ -49,18 +62,20 @@ class Delegation(object):
         Gets the ID of this delegation and the corresponding auction
 
         :return: the ID
+        :rtype: int
         """
 
         return self.__auction_id
 
-    # Manipulating and checking auction steps
+    # ------- Manipulating and checking auction steps -------
 
     def decrement_and_check_steps(self):
         """
-        Decrements current auction_steps and checks if the all steps are
+        Decrements current auction_steps and checks if all waiting steps are
         finished
 
         :return: Whether the auction has waited all steps or not
+        :rtype: bool
         """
 
         if self.__auction_steps > 0:
@@ -83,13 +98,14 @@ class Delegation(object):
 
         self.__auction_steps = self.__auction_steps_max
 
-    # Proposals
+    # ------- Proposals -------
 
     def add_proposal(self, proposal):
         """
         Adds a proposal to the sorted list of proposals of this delegation
 
         :param proposal: a proper proposal
+        :type proposal: Proposal
         :raises Warning: if bidder of this proposal is forbidden
         """
 
@@ -106,6 +122,7 @@ class Delegation(object):
         the list of proposals stays sorted
 
         :param proposal: The Proposal that should be removed
+        :type proposal: Proposal
         """
 
         self.__proposals.remove(proposal)
@@ -115,6 +132,7 @@ class Delegation(object):
         Returns the currently best proposal of this delegation
 
         :return: best proposal
+        :rtype: Proposal
         :raises LookupError: if got no proposals
         """
 
@@ -134,14 +152,15 @@ class Delegation(object):
         """
         Returns if the auction of this delegation has any proposals
 
-        :return: boolean whether it has proposals or not
+        :return: whether this delegation has proposals or not
+        :rtype: bool
         """
 
         if len(self.__proposals) > 0:
             return True
         return False
 
-    # Forbidding and allowing bidders
+    # ------- Forbidding and allowing bidders (not currently used) -------
 
     def forbid_bidder(self, name):
         """
@@ -149,6 +168,7 @@ class Delegation(object):
         allowed
 
         :param name: name of the forbidden bidder
+        :type name: str
         """
 
         self.__forbidden_bidders.append(name)
@@ -158,7 +178,9 @@ class Delegation(object):
         Returns whether the name is on the forbidden list or not
 
         :param name: name of the bidder
+        :type name: str
         :return: whether the name is on the forbidden list or not
+        :rtype: bool
         """
 
         return self.__forbidden_bidders.__contains__(name)
@@ -175,12 +197,13 @@ class Delegation(object):
         Allows bidder if he was formerly forbidden, else does nothing
 
         :param name: name of the bidder
+        :type name: str
         """
 
         if self.__forbidden_bidders.__contains__(name):
             self.__forbidden_bidders.remove(name)
 
-    # Contractor
+    # ------- Contractors -------
 
     def set_contractor(self, name):
         """
@@ -188,6 +211,7 @@ class Delegation(object):
         changes state of this delegation to delegated
 
         :param name: name of the contractor
+        :type name: str
         :raises DelegationContractorError: if contractor already chosen
         """
 
@@ -203,6 +227,7 @@ class Delegation(object):
         Gets the name of the contractor of this delegation
 
         :return: name of the contractor
+        :rtype: str
         :raises DelegationContractorError: if no contractor is already chosen
         """
 
@@ -219,13 +244,14 @@ class Delegation(object):
         self.__contractor = ""
         self.__got_contractor = False
 
-    # Goal
+    # ------- Goal -------
 
     def get_goal_representation(self):
         """
         Gets the Representation of the goal of this delegation
 
         :return: the representation of the goal
+        :rtype: str
         """
 
         return self.__goal_wrapper.get_goal_representation()
@@ -242,7 +268,7 @@ class Delegation(object):
 
     def send_goal(self, name):
         """
-        Sends goal to manager with that name
+        Sends the goal to the agent with that name
 
         If a Exception is raised in the goalwrapper it will be forwarded
 
@@ -255,7 +281,9 @@ class Delegation(object):
 
     def terminate_goal(self):
         """
-        Terminates the goal by unregistering and deleting it
+        Terminates the goal
+
+        If a Exception is raised in the goalwrapper it will be forwarded
         """
 
         self.__goal_wrapper.terminate_goal()
@@ -264,13 +292,15 @@ class Delegation(object):
         """
         Checks whether the goal is finished or not
 
+        If a Exception is raised in the goalwrapper it will be forwarded
+
         :return: whether the goal is finished or not
         :rtype: bool
         """
 
         return self.__goal_wrapper.check_goal_finished()
 
-    # Contracting
+    # ------- Auction and Contract -------
 
     def start_auction(self):
         """
@@ -287,7 +317,7 @@ class Delegation(object):
         Makes a contract by setting the bidder as contractor and sending the
         goal to the manager
 
-        Bidder and manager can be the same or different
+        Bidder and manager can be the same or different by name
 
         :param bidder_name: name of the bidder
         :type bidder_name: str
@@ -301,6 +331,14 @@ class Delegation(object):
         self.send_goal(name=manager_name)
 
     def check_if_alive(self):
+        """
+        Checks whether this delegation and its goal are still alive
+
+        If an exception is raised in the goalwrapper it will be forwarded
+
+        :return: whether this delegation and its goal are still alive
+        :rtype: bool
+        """
 
         if self.__goal_wrapper.check_if_still_alive():
             self.__timeout_steps = 0
@@ -317,13 +355,17 @@ class Delegation(object):
         """
         Removes contractor and terminates goal
 
-        NO STATE CHANGE!
+        State wont be changed, use finish_delegation instead
         """
 
         self.remove_contractor()
         self.terminate_goal()
 
     def finish_delegation(self):
+        """
+        Removes contractor, terminates goal and resets proposals as well as
+        the state of the delegation to finished
+        """
 
         self.terminate_contract()
         self.reset_proposals()
@@ -351,13 +393,19 @@ class Delegation(object):
 
     @property
     def depth(self):
+        """
+        Depth of this delegation at the level of this agent
+
+        :return: depth
+        :rtype: int
+        """
 
         return self.__depth
 
 
 class Proposal(object):
     """
-    This is a simple container for a proposal for an auction.
+    This is a simple container for a proposal for the auction.
     Contains name of the bidder and the proposed value.
     """
 
@@ -366,7 +414,9 @@ class Proposal(object):
         Constructor of an instance of Proposal
 
         :param name: the name of the bidder who made the proposal
+        :type name: str
         :param value: the proposed cost
+        :type value: float
         """
 
         self.__name = name
@@ -384,6 +434,7 @@ class Proposal(object):
         Representation of the proposal
 
         :return: string that represents the proposal
+        :rtype: str
         """
 
         return "("+str(self.__name)+", "+str(self.__value)+")"
@@ -393,6 +444,7 @@ class Proposal(object):
         Returns the value of this proposal
 
         :return: value of the proposal
+        :rtype: float
         """
 
         return self.__value
@@ -402,6 +454,7 @@ class Proposal(object):
         Returns name of the bidder, that made this proposal
 
         :return: name of the bidder
+        :rtype: str
         """
 
         return self.__name
@@ -445,6 +498,7 @@ class DelegationState(object):
         Checks if the state is READY
 
         :return: whether the state is READY or not
+        :rtype: bool
         """
 
         return self.__state_id == 0
@@ -454,6 +508,7 @@ class DelegationState(object):
         Checks if the state is WAITING_FOR_PROPOSALS
 
         :return: whether the state is WAITING_FOR_PROPOSALS or not
+        :rtype: bool
         """
 
         return self.__state_id == 1
@@ -463,6 +518,7 @@ class DelegationState(object):
         Checks if the state is DELEGATED_RUNNING
 
         :return: whether the state is DELEGATED_RUNNING or not
+        :rtype: bool
         """
 
         return self.__state_id == 2
@@ -472,6 +528,7 @@ class DelegationState(object):
         Checks if the state is FINISHED
 
         :return: whether the state is FINISHED or not
+        :rtype: bool
         """
 
         return self.__state_id == 3

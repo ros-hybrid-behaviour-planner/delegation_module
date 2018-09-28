@@ -29,7 +29,7 @@ class CostEvaluatorBase(object):
         """
         Updates cost factors for all CostEvaluators on this node
 
-        :param kwargs: dict of factors
+        :param kwargs: dict of weight-factors
         :type kwargs: dict
         :return: string that can be used for logging, includes all information
             about the new factors
@@ -64,8 +64,9 @@ class CostEvaluatorBase(object):
     def compute_cost_and_possibility(self, goal_representation, current_task_count, max_task_count, current_depth, max_depth, members, own_name):
         """
         Computes cost and possibility of a goal given its statement.
-        This is accomplished by trying to plan with the PDDL-planner of the
-        manager and using the plans to extract possibility and cost
+        This is accomplished by trying to plan with the
+        plan_and_extract_parameters() function and uses the parameters for the
+        cost_evaluate() function
 
         :param goal_representation: PDDL representation of the goal (goal-statement)
         :type goal_representation: str
@@ -104,7 +105,7 @@ class CostEvaluatorBase(object):
 
     def cost_evaluate(self, parameters):
         """
-        Evaluates cost with default cost_function
+        Evaluates cost with the default cost_function
 
         Can be overridden if other cost_function is needed
 
@@ -146,7 +147,7 @@ class CostEvaluatorBase(object):
         """
         Here the planning should happen depending on system planning
         capabilities, afterwards needed parameters for cost function should
-        be determined
+        be determined and packed into a CostParamters object
 
         Needs to be implemented!
 
@@ -166,6 +167,7 @@ class CostEvaluatorBase(object):
         :type max_task_count: int
         :return: CostFunction-Parameters
         :rtype: CostParameters
+        :raises: Exception if planning impossible
         """
 
         raise NotImplementedError
@@ -277,6 +279,12 @@ class CostParameters(object):
         self.max_task_count = max_task_count
 
     def __repr__(self):
+        """
+        Representation
+        :return: Representation
+        :rtype: str
+        """
+
         representation = "[CostParameters:(name:" + self.name
         representation += "),(base_steps:" + str(self.base_steps)
         representation += "),(full_steps:" + str(self.full_steps)
