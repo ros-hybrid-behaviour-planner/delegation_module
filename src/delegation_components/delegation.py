@@ -57,16 +57,6 @@ class Delegation(object):
         del self.state
         del self.__goal_wrapper
 
-    def get_auction_id(self):
-        """
-        Gets the ID of this delegation and the corresponding auction
-
-        :return: the ID
-        :rtype: int
-        """
-
-        return self.__auction_id
-
     # ------- Manipulating and checking auction steps -------
 
     def decrement_and_check_steps(self):
@@ -109,7 +99,7 @@ class Delegation(object):
         :raises Warning: if bidder of this proposal is forbidden
         """
 
-        name = proposal.get_name()
+        name = proposal.name
         if self.__forbidden_bidders.__contains__(name):
             raise Warning("Proposal wont be added, bidder " + str(name) +
                           " is forbidden")
@@ -380,6 +370,19 @@ class Delegation(object):
         self.terminate_contract()
         self.state.set_ready()
 
+    # ------- Properties -------
+
+    @property
+    def auction_id(self):
+        """
+        Gets the ID of this delegation and the corresponding auction
+
+        :return: the ID
+        :rtype: int
+        """
+
+        return self.__auction_id
+
     @property
     def client_id(self):
         """
@@ -427,7 +430,7 @@ class Proposal(object):
         Comparator for proposals
         """
 
-        return cmp(self.get_value(), other.get_value())
+        return cmp(self.value, other.value)
 
     def __repr__(self):
         """
@@ -439,7 +442,8 @@ class Proposal(object):
 
         return "("+str(self.__name)+", "+str(self.__value)+")"
 
-    def get_value(self):
+    @property
+    def value(self):
         """
         Returns the value of this proposal
 
@@ -449,7 +453,8 @@ class Proposal(object):
 
         return self.__value
 
-    def get_name(self):
+    @property
+    def name(self):
         """
         Returns name of the bidder, that made this proposal
 

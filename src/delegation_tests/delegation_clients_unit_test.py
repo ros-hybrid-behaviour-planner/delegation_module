@@ -31,8 +31,8 @@ class AdditionalTestDelegationManager(object):
     This has no other methods of the DM on purpose
     """
 
-    @staticmethod
-    def get_name():
+    @property
+    def name(self):
         return "TestManager"
 
 

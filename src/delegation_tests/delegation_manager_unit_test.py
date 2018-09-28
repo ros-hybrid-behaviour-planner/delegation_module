@@ -64,7 +64,7 @@ class DelegationManagerTest(unittest.TestCase):
 
         uut = self.new_uut()
 
-        self.assertEqual(uut.get_name(), self.uut_name)
+        self.assertEqual(uut.name, self.uut_name)
         curr_id = uut.get_new_auction_id()
         self.assertEqual(uut.get_new_auction_id(), curr_id + 1)
 
@@ -83,16 +83,16 @@ class DelegationManagerTest(unittest.TestCase):
         self.dynrecClient.update_configuration({"max_tasks":-1})
         uut = self.new_uut()
         rospy.sleep(1)
-        self.assertTrue(uut.check_possible_tasks())
+        self.assertTrue(uut.check_possible_tasks)
         uut.add_task(new_task=task2)
         uut.add_task(new_task=task1)
-        self.assertTrue(uut.check_possible_tasks())
+        self.assertTrue(uut.check_possible_tasks)
         uut.__del__()
 
         # Max Tasks = 0
         self.dynrecClient.update_configuration({"max_tasks":0})
         uut = self.new_uut()
-        self.assertFalse(uut.check_possible_tasks())
+        self.assertFalse(uut.check_possible_tasks)
         self.assertRaises(DelegationError, uut.add_task, task1)
         self.assertRaises(LookupError, uut.get_task_by_goal_name, g1)
         uut.__del__()
@@ -100,9 +100,9 @@ class DelegationManagerTest(unittest.TestCase):
         # Max tasks = 1
         self.dynrecClient.update_configuration({"max_tasks":1})
         uut = self.new_uut()
-        self.assertTrue(uut.check_possible_tasks())
+        self.assertTrue(uut.check_possible_tasks)
         uut.add_task(new_task=task1)
-        self.assertFalse(uut.check_possible_tasks())
+        self.assertFalse(uut.check_possible_tasks)
         self.assertRaises(DelegationError, uut.add_task, task2)
         self.assertEqual(uut.get_task_by_goal_name(goal_name=g1), task1)
         self.assertRaises(LookupError, uut.get_task_by_goal_name, g2)
@@ -111,13 +111,13 @@ class DelegationManagerTest(unittest.TestCase):
         # Max tasks > 1
         self.dynrecClient.update_configuration({"max_tasks":2})
         uut = self.new_uut()
-        self.assertTrue(uut.check_possible_tasks())
+        self.assertTrue(uut.check_possible_tasks)
         uut.add_task(new_task=task1)
-        self.assertTrue(uut.check_possible_tasks())
+        self.assertTrue(uut.check_possible_tasks)
         uut.add_task(new_task=task2)
         self.assertEqual(uut.get_task_by_goal_name(goal_name=g1), task1)
         self.assertEqual(uut.get_task_by_goal_name(goal_name=g2), task2)
-        self.assertFalse(uut.check_possible_tasks())
+        self.assertFalse(uut.check_possible_tasks)
         uut.__del__()
 
     def test_cfp_callback(self):
@@ -176,7 +176,7 @@ class DelegationManagerTest(unittest.TestCase):
         delegation = uut.get_delegation(auction_id=auction_id)
         self.assertIsInstance(delegation, Delegation)
         self.assertTrue(delegation.state.is_waiting_for_proposals())
-        self.assertEqual(delegation.get_auction_id(), auction_id)
+        self.assertEqual(delegation.auction_id, auction_id)
         self.assertEqual(delegation.client_id, self.mocked_client_id)
 
     def test_propose_callback(self):
@@ -198,8 +198,8 @@ class DelegationManagerTest(unittest.TestCase):
         rospy.sleep(1)
         delegation = uut.get_delegation(auction_id=auction_id)
         proposal = delegation.get_best_proposal()
-        self.assertEqual(proposal.get_name(), self.mocked_DM_name)
-        self.assertEqual(proposal.get_value(), proposed_value)
+        self.assertEqual(proposal.name, self.mocked_DM_name)
+        self.assertEqual(proposal.value, proposed_value)
 
     def test_ending_auctions(self):
         """
@@ -340,7 +340,7 @@ class DelegationManagerTest(unittest.TestCase):
 
         # cost not computable
         uut = self.new_uut()
-        uut.check_possible_tasks()
+        uut.check_possible_tasks
         response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth, delegation_members=self.standard_members)
         self.assertFalse(response.acceptance)
         self.assertFalse(response.still_biding)

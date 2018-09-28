@@ -145,7 +145,8 @@ class MockedDelegationManager(object):
     def remove_client(self, client_id):
         self.clients.remove(client_id)
 
-    def get_name(self):
+    @property
+    def name(self):
         return self._name
 
     def set_cost_function_evaluator(self, cost_function_evaluator, agent_name, client_id):

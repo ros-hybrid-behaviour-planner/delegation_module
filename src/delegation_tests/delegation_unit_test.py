@@ -143,7 +143,7 @@ class DelegationTest(unittest.TestCase):
 
         auction_id = 1
         delegation = Delegation(goal_wrapper=self.wrapper, auction_id=auction_id, client_id=1)
-        self.assertEqual(delegation.get_auction_id(), auction_id)
+        self.assertEqual(delegation.auction_id, auction_id)
 
         bidder = "bidder"
         manager = "manager"
@@ -196,8 +196,8 @@ class ProposalTest(unittest.TestCase):
         value2 = 3
         proposal2 = Proposal(name=name, value=value2)
 
-        self.assertEqual(proposal1.get_name(), name)
-        self.assertEqual(proposal1.get_value(), value1)
+        self.assertEqual(proposal1.name, name)
+        self.assertEqual(proposal1.value, value1)
         self.assertEqual(cmp(proposal1, proposal2), cmp(value1, value2))
 
 

@@ -96,9 +96,9 @@ class DelegationClientBase(object):
 
         if self._manager_active:
             self.logger.logwarn("Attempt to log a new delegation_manager with the name \""
-                                + str(delegation_manager.get_name())
+                                + str(delegation_manager.name)
                                 + "\" while one with the name \""
-                                + str(self._delegation_manager.get_name())
+                                + str(self._delegation_manager.name)
                                 + "\" is already registered.\nNew DelegationManager will be ignored.")
             # will still use the old registered one
             return

@@ -272,7 +272,7 @@ class DelegationManager(object):
         response.new_proposal = 0
         response.manager_name = ""
 
-        if not self.check_possible_tasks():
+        if not self.check_possible_tasks:
             # not bidding if no new task possible right now or in general
             self.__loginfo("Wont bid, because i already have enough tasks or cannot take any")
             return response
@@ -412,7 +412,7 @@ class DelegationManager(object):
 
         self.__loginfo("Got CFP from " + str(auctioneer_name) + " with ID " + str(auction_id))
 
-        if not self.check_possible_tasks():
+        if not self.check_possible_tasks:
             # not bidding if i cannot take tasks right now or in general
             self.__loginfo("Wont bid, because i already have enough tasks or cannot take any")
             return
@@ -630,7 +630,7 @@ class DelegationManager(object):
             self.__logwarn("Get_Depth call failed")
             raise DelegationServiceError("Call failed: " + str(service_name))
 
-    # ------ Simple Getter/Setter for members ------
+    # ------  ------
 
     def update_config(self, config):
         """
@@ -771,19 +771,6 @@ class DelegationManager(object):
         del self.__cost_function_evaluator
         self.__cost_function_evaluator = None
 
-    def check_possible_tasks(self):
-        """
-        Checks whether additional tasks are possible right now or not
-
-        :return: whether additional tasks are possible right now
-        :rtype: bool
-        """
-
-        if len(self.__tasks) >= self.__max_tasks != -1:
-            return False
-        else:
-            return True
-
     def get_delegation(self, auction_id):
         """
         Gets the delegation with this auction_id or raises an exception if
@@ -797,7 +784,7 @@ class DelegationManager(object):
         """
 
         for delegation in self.__delegations:
-            if delegation.get_auction_id() == auction_id:
+            if delegation.auction_id == auction_id:
                 return delegation
 
         # if no delegation with this name exists
@@ -840,31 +827,6 @@ class DelegationManager(object):
 
         return self.__auction_id
 
-    def get_name(self):
-        """
-        Gets the DelegationManager name
-
-        :return: name of this delegation manager
-        :rtype: str
-        """
-
-        return self._name
-
-    def get_current_employers(self):
-        """
-        List of current Employers of this DelegationManager according to the
-        current tasks
-
-        :return: list of the employers
-        :rtype: list(str)
-        """
-
-        employers = list()
-        for t in self.__tasks:
-            employers.extend(t.employers)
-
-        return list(set(employers))
-
     # ------ Make auctions etc ------
 
     def __precom(self, proposal, delegation):
@@ -886,14 +848,14 @@ class DelegationManager(object):
         else:
             depth = delegation.depth + 1
 
-        employers = self.get_current_employers()
+        employers = self.current_employers
         employers.append(self._name)
         delegation_members = list(set(employers))
 
-        response = self.__send_precom(target_name=proposal.get_name(),
-                                      auction_id=delegation.get_auction_id(),
+        response = self.__send_precom(target_name=proposal.name,
+                                      auction_id=delegation.auction_id,
                                       goal_name=delegation.get_goal_name(),
-                                      proposal_value=proposal.get_value(),
+                                      proposal_value=proposal.value,
                                       goal_representation=delegation.get_goal_representation(),
                                       delegation_members=delegation_members,
                                       depth=depth)
@@ -916,10 +878,10 @@ class DelegationManager(object):
         else:
             depth = delegation.depth + 1
 
-        auction_id = delegation.get_auction_id()
+        auction_id = delegation.auction_id
         goal_representation = delegation.get_goal_representation()
 
-        employers = self.get_current_employers()
+        employers = self.current_employers
         employers.append(self._name)
         delegation_members = list(set(employers))
 
@@ -946,7 +908,7 @@ class DelegationManager(object):
         :rtype: bool
         """
 
-        auction_id = delegation.get_auction_id()
+        auction_id = delegation.auction_id
         self.__loginfo("Trying to end auction with ID " + str(auction_id))
 
         up_for_delegation = True
@@ -965,8 +927,8 @@ class DelegationManager(object):
                                + " has no proposals")
                 break
 
-            bidder_name = best_proposal.get_name()
-            proposed_value = best_proposal.get_value()
+            bidder_name = best_proposal.name
+            proposed_value = best_proposal.value
 
             if bidder_name == self._name:
                 self.__loginfo("I won my own auction with the ID "
@@ -974,7 +936,7 @@ class DelegationManager(object):
                 # make sure i do the work myself
                 client_id = delegation.client_id
                 client = DelegationClientBase.get_client(client_id=client_id)
-                client.start_work_for_delegation(delegation_id=delegation.get_auction_id())
+                client.start_work_for_delegation(delegation_id=delegation.auction_id)
                 up_for_delegation = False
                 break
 
@@ -1023,7 +985,7 @@ class DelegationManager(object):
                                + " for my auction " + str(auction_id))
                 delegation.remove_proposal(proposal=best_proposal)
 
-                if best_proposal.get_value() >= response.new_proposal:
+                if best_proposal.value >= response.new_proposal:
                     self.__logwarn("The new proposal is not worse than the old proposal while he is not accepting the old proposal,"
                                    + " something is off!\nWont add this new proposal just to be safe")
                     continue
@@ -1043,7 +1005,7 @@ class DelegationManager(object):
             self.__start_auction(delegation=delegation)
             return False
         else:
-            self.__loginfo("Auction with ID " + str(delegation.get_auction_id()) + " is finished")
+            self.__loginfo("Auction with ID " + str(delegation.auction_id) + " is finished")
             return True
 
     # ------ Functions to interact with the DelegationManager ------
@@ -1138,7 +1100,7 @@ class DelegationManager(object):
             proposal = Proposal(name=self._name, value=own_cost)
             new.add_proposal(proposal=proposal)
 
-        return new.get_auction_id()
+        return new.auction_id
 
     def _check_depth(self, depth):
         """
@@ -1179,17 +1141,17 @@ class DelegationManager(object):
         for delegation in running_delegations:
             if not delegation.check_if_alive():
                 self.__logwarn("Too many TIMEOUTS for the contractor \""+str(delegation.get_contractor())
-                               + "\" of the auction with the ID "+str(delegation.get_auction_id())
+                               + "\" of the auction with the ID "+str(delegation.auction_id)
                                + "! Will try to find a new contractor.")
                 contractor_name = delegation.get_contractor()
                 delegation.fail_current_delegation()  # unregisters goal
                 self.__start_auction(delegation)
 
             if delegation.check_if_goal_finished():
-                self.__loginfo("Delegation with ID "+str(delegation.get_auction_id())+" was successful")
+                self.__loginfo("Delegation with ID " + str(delegation.auction_id) + " was successful")
                 delegation.finish_delegation()
                 client = DelegationClientBase.get_client(client_id=delegation.client_id)
-                client.delegation_successful(delegation_id=delegation.get_auction_id())
+                client.delegation_successful(delegation_id=delegation.auction_id)
 
         for delegation in waiting_delegations:
             # decrementing the needed steps and checking at the same time
@@ -1214,6 +1176,35 @@ class DelegationManager(object):
             # this goal was no task given by a different manager
             return
 
+    # ------ Properties ------
+
+    @property
+    def name(self):
+        """
+        Gets the DelegationManager name
+
+        :return: name of this delegation manager
+        :rtype: str
+        """
+
+        return self._name
+
+    @property
+    def current_employers(self):
+        """
+        List of current Employers of this DelegationManager according to the
+        current tasks
+
+        :return: list of the employers
+        :rtype: list(str)
+        """
+
+        employers = list()
+        for t in self.__tasks:
+            employers.extend(t.employers)
+
+        return list(set(employers))
+
     @property
     def depth_checking_possible(self):
         """
@@ -1236,3 +1227,17 @@ class DelegationManager(object):
         """
 
         return self.__cost_computable
+
+    @property
+    def check_possible_tasks(self):
+        """
+        Whether additional tasks are possible right now or not
+
+        :return: whether additional tasks are possible right now
+        :rtype: bool
+        """
+
+        if len(self.__tasks) >= self.__max_tasks != -1:
+            return False
+        else:
+            return True
