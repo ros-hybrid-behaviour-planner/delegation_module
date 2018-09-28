@@ -113,7 +113,7 @@ class DelegationClientTest(unittest.TestCase):
         uut.register(delegation_manager=self.dm)
         uut.add_own_cost_evaluator(cost_evaluator=cost_eval, agent_name=manager)
         self.assertEqual(self.dm.cfe, cost_eval)
-        self.assertEqual(self.dm.m_name, manager)
+        self.assertEqual(self.dm.agent_name, manager)
         self.assertEqual(self.dm.client_id, uut.id)
 
     def test_steps(self):

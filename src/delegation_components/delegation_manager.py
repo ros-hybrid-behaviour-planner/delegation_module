@@ -55,17 +55,13 @@ class DelegationManager(object):
 
     # ------ Initiation methods ------
 
-    def __init__(self, name="", max_tasks=0):
+    def __init__(self, name=""):
         """
         Constructor for the DelegationManager
 
         :param name: name of this instance of the DelegationManager,
                 should be unique
         :type name: str
-        :param max_tasks: number of maximum tasks that can simultaneously run,
-                set this to 0 for no possible tasks or -1 for unlimited number
-                of tasks
-        :type max_tasks: int
         """
 
         self._name = name
@@ -75,7 +71,7 @@ class DelegationManager(object):
         self.__delegations = []
         self.__auction_id = 0
 
-        self.__max_tasks = max_tasks
+        self.__max_tasks = 10   # should be changed by for dynamic_reconfigure
         self.__tasks = []
 
         self.__current_delegation_depth = 0
@@ -83,7 +79,7 @@ class DelegationManager(object):
         self.__cost_computable = False
         self.__cost_function_evaluator = None
         self.__registered_agent_name = ""
-        self.__manager_client_id = 0    # ID of the client of the manager
+        self.__manager_client_id = -1    # ID of the client of the manager
         self.__active_client_ids = []   # list of client IDs
 
         # not started at construction

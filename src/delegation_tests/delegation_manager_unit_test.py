@@ -14,6 +14,7 @@ from delegation_components.delegation_manager import DelegationManager
 from delegation_components.task import Task
 from delegation_components.delegation_errors import DelegationError
 from delegation_components.delegation import Delegation
+from dynamic_reconfigure.client import Client as DynRecClient
 
 
 class DelegationManagerTest(unittest.TestCase):
@@ -29,27 +30,30 @@ class DelegationManagerTest(unittest.TestCase):
         self.uut_mocked_manager_name = "UUTManager"
         self.mocked_client = MockedClient()
         self.mocked_client_id = self.mocked_client.id
-        self.uut = DelegationManager(name=self.uut_name, max_tasks=1)
+        self.uut = DelegationManager(name=self.uut_name)
         self.mocked_DM = MockedDelegationCommunicator(name=self.mocked_DM_name, manager_name=self.mocked_manager_name)
         self.mocked_cost_eval = MockedCostEvaluator(cost=0, possibility=True)
         self.standard_depth = 2
         self.standard_members = ["Member1", "Member2"]
+        self.dynrecClient = DynRecClient("UUT/delegation_module_parameters")
+        self.dynrecClient.update_configuration({"max_tasks":1}) # default for tests is 1
 
     def tearDown(self):
         self.mocked_DM.__del__()
         self.uut.__del__()
 
-    def new_uut(self, max_tasks=1):
+    def new_uut(self):
         """
-        Deletes old Unit under Test, UUT, and creates a new one
-        :param max_tasks: max tasks of the DelegationManager
-        :type max_tasks: int
+        Deletes old Unit under Test, UUT, and creates a new one. Also resets
+        messages and config
+
         :return: uut
         :rtype: DelegationManager
         """
 
         self.uut.__del__()
-        uut = DelegationManager(name=self.uut_name, max_tasks=max_tasks)
+        uut = DelegationManager(name=self.uut_name)
+        self.mocked_DM.reset_messages()
         self.uut = uut
         return uut
 
@@ -76,7 +80,9 @@ class DelegationManagerTest(unittest.TestCase):
         task2 = Task(auction_id=id2, auctioneer_name=n2, goal_name=g2, depth=self.standard_depth)
 
         # Max Tasks = -1 (infinite)
-        uut = self.new_uut(max_tasks=-1)
+        self.dynrecClient.update_configuration({"max_tasks":-1})
+        uut = self.new_uut()
+        rospy.sleep(1)
         self.assertTrue(uut.check_possible_tasks())
         uut.add_task(new_task=task2)
         uut.add_task(new_task=task1)
@@ -84,14 +90,16 @@ class DelegationManagerTest(unittest.TestCase):
         uut.__del__()
 
         # Max Tasks = 0
-        uut = self.new_uut(max_tasks=0)
+        self.dynrecClient.update_configuration({"max_tasks":0})
+        uut = self.new_uut()
         self.assertFalse(uut.check_possible_tasks())
         self.assertRaises(DelegationError, uut.add_task, task1)
         self.assertRaises(LookupError, uut.get_task_by_goal_name, g1)
         uut.__del__()
 
         # Max tasks = 1
-        uut = self.new_uut(max_tasks=1)
+        self.dynrecClient.update_configuration({"max_tasks":1})
+        uut = self.new_uut()
         self.assertTrue(uut.check_possible_tasks())
         uut.add_task(new_task=task1)
         self.assertFalse(uut.check_possible_tasks())
@@ -101,7 +109,8 @@ class DelegationManagerTest(unittest.TestCase):
         uut.__del__()
 
         # Max tasks > 1
-        uut = self.new_uut(max_tasks=2)
+        self.dynrecClient.update_configuration({"max_tasks":2})
+        uut = self.new_uut()
         self.assertTrue(uut.check_possible_tasks())
         uut.add_task(new_task=task1)
         self.assertTrue(uut.check_possible_tasks())
@@ -337,14 +346,16 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertFalse(response.still_biding)
 
         # max tasks = 0
-        uut = self.new_uut(max_tasks=0)
+        self.dynrecClient.update_configuration({"max_tasks":0})
+        uut = self.new_uut()
         uut.set_cost_function_evaluator(cost_function_evaluator=self.mocked_cost_eval, agent_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)
         response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth, delegation_members=self.standard_members)
         self.assertFalse(response.acceptance)
         self.assertFalse(response.still_biding)
 
         # not possible anymore
-        uut = self.new_uut(max_tasks=1)
+        self.dynrecClient.update_configuration({"max_tasks":1})
+        uut = self.new_uut()
         uut.set_cost_function_evaluator(cost_function_evaluator=MockedCostEvaluator(cost=0, possibility=False), agent_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)
         response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth, delegation_members=self.standard_members)
         self.assertFalse(response.acceptance)
@@ -352,7 +363,8 @@ class DelegationManagerTest(unittest.TestCase):
 
         # cost is worse now
         new_cost = old_proposal + 1
-        uut = self.new_uut(max_tasks=1)
+        self.dynrecClient.update_configuration({"max_tasks":1})
+        uut = self.new_uut()
         uut.set_cost_function_evaluator(cost_function_evaluator=MockedCostEvaluator(cost=new_cost, possibility=True), agent_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)
         response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth, delegation_members=self.standard_members)
         self.assertFalse(response.acceptance)
@@ -360,8 +372,9 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertEqual(response.new_proposal, new_cost)
 
         # cost is exactly the same
+        self.dynrecClient.update_configuration({"max_tasks":-1})
         new_cost = old_proposal
-        uut = self.new_uut(max_tasks=1)
+        uut = self.new_uut()
         uut.set_cost_function_evaluator(cost_function_evaluator=MockedCostEvaluator(cost=new_cost, possibility=True), agent_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)
         response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth, delegation_members=self.standard_members)
         self.assertTrue(response.acceptance)

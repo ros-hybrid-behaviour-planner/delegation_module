@@ -126,7 +126,7 @@ class MockedDelegationManager(object):
     def __init__(self):
         self._name = "test_name"
         self.cfe = None
-        self.m_name = None
+        self.agent_name = None
         self.client_id = None
         self.goal_wrapper = None
         self.clients = []
@@ -148,9 +148,9 @@ class MockedDelegationManager(object):
     def get_name(self):
         return self._name
 
-    def set_cost_function_evaluator(self, cost_function_evaluator, manager_name, client_id):
+    def set_cost_function_evaluator(self, cost_function_evaluator, agent_name, client_id):
         self.cfe = cost_function_evaluator
-        self.m_name = manager_name
+        self.agent_name = agent_name
         self.client_id = client_id
 
     def delegate(self, goal_wrapper, client_id, known_depth, auction_steps=DelegationManager.DEFAULT_AUCTION_STEPS, own_cost=-1):
