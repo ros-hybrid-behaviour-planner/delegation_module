@@ -31,12 +31,12 @@ class DelegationManagerTest(unittest.TestCase):
         self.mocked_client = MockedClient()
         self.mocked_client_id = self.mocked_client.id
         self.uut = DelegationManager(name=self.uut_name)
+        self.dynrecClient = DynRecClient("UUT/delegation_module_parameters")
+        self.dynrecClient.update_configuration({"max_tasks": 1}) # default for tests is 1
         self.mocked_DM = MockedDelegationCommunicator(name=self.mocked_DM_name, manager_name=self.mocked_manager_name)
         self.mocked_cost_eval = MockedCostEvaluator(cost=0, possibility=True)
         self.standard_depth = 2
         self.standard_members = ["Member1", "Member2"]
-        self.dynrecClient = DynRecClient("UUT/delegation_module_parameters")
-        self.dynrecClient.update_configuration({"max_tasks":1}) # default for tests is 1
 
     def tearDown(self):
         self.mocked_DM.__del__()

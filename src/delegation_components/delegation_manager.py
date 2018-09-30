@@ -53,7 +53,7 @@ class DelegationManager(object):
     MAX_DELEGATION_DEPTH = 5
     DEFAULT_AUCTION_STEPS = 1
 
-    # ------ Initiation methods ------
+    # ------ Initiation and Config ------
 
     def __init__(self, name=""):
         """
@@ -129,6 +129,30 @@ class DelegationManager(object):
 
         # not started at construction
         self._get_depth_service = None
+
+    def update_config(self, config):
+        """
+        Updates configuration for this DelegationManager and the CostEvaluators
+        on this node
+
+        :param config: dict with parameters
+        :type config: dict
+        """
+
+        self.MAX_CONSECUTIVE_TIMEOUTS = config.get("max_consecutive_timeouts", self.MAX_CONSECUTIVE_TIMEOUTS)
+        self.MAX_CONSECUTIVE_TRIES = config.get("max_consecutive_tries", self.MAX_CONSECUTIVE_TRIES)
+        self.MAX_DELEGATION_DEPTH = config.get("max_delegation_depth", self.MAX_DELEGATION_DEPTH)
+        self.DEFAULT_AUCTION_STEPS = config.get("auction_steps", self.DEFAULT_AUCTION_STEPS)
+        self.__max_tasks = config.get("max_tasks", self.__max_tasks)
+
+        self.__loginfo("Parameters updated:" +
+                       "\n\tMAX_CONSECUTIVE_TIMEOUTS\t" + str(self.MAX_CONSECUTIVE_TIMEOUTS) +
+                       "\n\tMAX_CONSECUTIVE_TRIES\t" + str(self.MAX_CONSECUTIVE_TRIES) +
+                       "\n\tMAX_DELEGATION_DEPTH\t" + str(self.MAX_DELEGATION_DEPTH) +
+                       "\n\tAUCTION_STEPS\t\t" + str(self.DEFAULT_AUCTION_STEPS) +
+                       "\n\tMAX_TASKS\t\t" + str(self.__max_tasks))
+
+        self.__loginfo(CostEvaluatorBase.update_config(**config))
 
     # ------ Deletion methods ------
 
@@ -435,38 +459,6 @@ class DelegationManager(object):
                 self.__logwarn("Sending of Proposal not working, continuing without (error_message:\""
                                + str(e.message) + "\")")
 
-    def _determine_cost_and_possibility(self, goal_representation, depth, members):
-        """
-        Determines cost and possibility using the CostEvaluator
-
-        :param goal_representation: representation of the goal
-        :type goal_representation: str
-        :param depth: depth of the goal
-        :type depth: int
-        :param members: list of the current members of the delegation
-        :type members: list(str)
-        :return: Cost and Possibility of the goal
-        :rtype: float, bool
-        """
-
-        try:
-            cost, goal_possible = self.__cost_function_evaluator.compute_cost_and_possibility(goal_representation=goal_representation,
-                                                                                              current_task_count=len(self.__tasks),
-                                                                                              max_task_count=self.__max_tasks,
-                                                                                              current_depth=depth,
-                                                                                              max_depth=self.MAX_DELEGATION_DEPTH,
-                                                                                              members=members,
-                                                                                              own_name=self._name)
-            if goal_possible:
-                s = "possible with a cost of " + str(cost)
-            else:
-                s = "impossible"
-            self.__loginfo("Task is " + s)
-        except DelegationPlanningWarning as e:
-            self.__loginfo("Goal not possible. PlannerMessage: " + str(e.message))
-            cost, goal_possible = -1, False
-        return cost, goal_possible
-
     # ------ Message sending methods ------
 
     def __send_propose(self, value, target_name, auction_id):
@@ -630,31 +622,7 @@ class DelegationManager(object):
             self.__logwarn("Get_Depth call failed")
             raise DelegationServiceError("Call failed: " + str(service_name))
 
-    # ------  ------
-
-    def update_config(self, config):
-        """
-        Updates configuration for this DelegationManager and the CostEvaluators
-        on this node
-
-        :param config: dict with parameters
-        :type config: dict
-        """
-
-        self.MAX_CONSECUTIVE_TIMEOUTS = config.get("max_consecutive_timeouts", self.MAX_CONSECUTIVE_TIMEOUTS)
-        self.MAX_CONSECUTIVE_TRIES = config.get("max_consecutive_tries", self.MAX_CONSECUTIVE_TRIES)
-        self.MAX_DELEGATION_DEPTH = config.get("max_delegation_depth", self.MAX_DELEGATION_DEPTH)
-        self.DEFAULT_AUCTION_STEPS = config.get("auction_steps", self.DEFAULT_AUCTION_STEPS)
-        self.__max_tasks = config.get("max_tasks", self.__max_tasks)
-
-        self.__loginfo("Parameters updated:" +
-                       "\n\tMAX_CONSECUTIVE_TIMEOUTS\t" + str(self.MAX_CONSECUTIVE_TIMEOUTS) +
-                       "\n\tMAX_CONSECUTIVE_TRIES\t" + str(self.MAX_CONSECUTIVE_TRIES) +
-                       "\n\tMAX_DELEGATION_DEPTH\t" + str(self.MAX_DELEGATION_DEPTH) +
-                       "\n\tAUCTION_STEPS\t\t" + str(self.DEFAULT_AUCTION_STEPS) +
-                       "\n\tMAX_TASKS\t\t" + str(self.__max_tasks))
-
-        self.__loginfo(CostEvaluatorBase.update_config(**config))
+    # ---- Depths ----
 
     def check_remote_depth(self, prefix):
         """
@@ -675,21 +643,25 @@ class DelegationManager(object):
             depth = None
         return depth
 
-    def add_task(self, new_task):
+    def start_depth_service(self, prefix):
         """
-        Adds the task to the task list if possible
+        Starts the Get_Depth service for this Manager with the given prefix
 
-        :param new_task: the new task
-        :type new_task: Task
-        :raises DelegationError: if it cant be added
+        :param prefix: prefix that should be used, e.g. the name of this agent
+        :type prefix: str
         """
 
-        if len(self.__tasks) >= self.__max_tasks != -1:
-            raise DelegationError
+        name = prefix + self.get_depth_suffix
+        self._get_depth_service = rospy.Service(name=name, service_class=Get_Depth, handler=self.__get_depth_callback)
 
-        self.__tasks.append(new_task)
+    def stop_depth_service(self):
+        """
+        Stop the Get_Depth service of this DelegationManager
+        """
 
-        self.update_delegation_depth()
+        if self._get_depth_service is not None:
+            self._get_depth_service.shutdown()
+            self._get_depth_service = None
 
     def update_delegation_depth(self):
         """
@@ -700,6 +672,8 @@ class DelegationManager(object):
             self.__current_delegation_depth = 0
         else:
             self.__current_delegation_depth = max([t.depth for t in self.__tasks])
+
+    # ---- Clients ----
 
     def add_client(self, client_id):
         """
@@ -722,25 +696,7 @@ class DelegationManager(object):
         if self.__active_client_ids.__contains__(client_id):
             self.__active_client_ids.remove(client_id)
 
-    def start_depth_service(self, prefix):
-        """
-        Starts the Get_Depth service for this Manager with the given prefix
-
-        :param prefix: prefix that should be used, e.g. the name of this agent
-        :type prefix: str
-        """
-
-        name = prefix + self.get_depth_suffix
-        self._get_depth_service = rospy.Service(name=name, service_class=Get_Depth, handler=self.__get_depth_callback)
-
-    def stop_depth_service(self):
-        """
-        Stop the Get_Depth service of this DelegationManager
-        """
-
-        if self._get_depth_service is not None:
-            self._get_depth_service.shutdown()
-            self._get_depth_service = None
+    # ---- Cost Function Evaluator ----
 
     def set_cost_function_evaluator(self, cost_function_evaluator, agent_name, client_id):
         """
@@ -771,6 +727,41 @@ class DelegationManager(object):
         del self.__cost_function_evaluator
         self.__cost_function_evaluator = None
 
+    # ------ Tasks, Delegations, IDs ------
+
+    def add_task(self, new_task):
+        """
+        Adds the task to the task list if possible
+
+        :param new_task: the new task
+        :type new_task: Task
+        :raises DelegationError: if it cant be added
+        """
+
+        if len(self.__tasks) >= self.__max_tasks != -1:
+            raise DelegationError
+
+        self.__tasks.append(new_task)
+
+        self.update_delegation_depth()
+
+    def get_task_by_goal_name(self, goal_name):
+        """
+        Returns a currently running task with the given goal
+
+        :param goal_name: name of the goal that the task has
+        :type goal_name: str
+        :return: the running task
+        :rtype: Task
+        :raises LookupError: if there is no task with that goal
+        """
+
+        for task in self.__tasks:
+            if task.goal_name == goal_name:
+                return task
+
+        raise LookupError("No task with the goal named " + str(goal_name))
+
     def get_delegation(self, auction_id):
         """
         Gets the delegation with this auction_id or raises an exception if
@@ -789,23 +780,6 @@ class DelegationManager(object):
 
         # if no delegation with this name exists
         raise LookupError("No delegation with the auction_id " + str(auction_id))
-
-    def get_task_by_goal_name(self, goal_name):
-        """
-        Returns a currently running task with the given goal
-
-        :param goal_name: name of the goal that the task has
-        :type goal_name: str
-        :return: the running task
-        :rtype: Task
-        :raises LookupError: if there is no task with that goal
-        """
-
-        for task in self.__tasks:
-            if task.goal_name == goal_name:
-                return task
-
-        raise LookupError("No task with the goal named " + str(goal_name))
 
     def get_new_auction_id(self):
         """
@@ -827,7 +801,58 @@ class DelegationManager(object):
 
         return self.__auction_id
 
-    # ------ Make auctions etc ------
+    # ------ Make auctions etc, internal methods ------
+
+    def _determine_cost_and_possibility(self, goal_representation, depth, members):
+        """
+        Determines cost and possibility using the CostEvaluator
+
+        :param goal_representation: representation of the goal
+        :type goal_representation: str
+        :param depth: depth of the goal
+        :type depth: int
+        :param members: list of the current members of the delegation
+        :type members: list(str)
+        :return: Cost and Possibility of the goal
+        :rtype: float, bool
+        """
+
+        try:
+            cost, goal_possible = self.__cost_function_evaluator.compute_cost_and_possibility(goal_representation=goal_representation,
+                                                                                              current_task_count=len(self.__tasks),
+                                                                                              max_task_count=self.__max_tasks,
+                                                                                              current_depth=depth,
+                                                                                              max_depth=self.MAX_DELEGATION_DEPTH,
+                                                                                              members=members,
+                                                                                              own_name=self._name)
+            if goal_possible:
+                s = "possible with a cost of " + str(cost)
+            else:
+                s = "impossible"
+            self.__loginfo("Task is " + s)
+        except DelegationPlanningWarning as e:
+            self.__loginfo("Goal not possible. PlannerMessage: " + str(e.message))
+            cost, goal_possible = -1, False
+        return cost, goal_possible
+
+    def _check_depth(self, depth):
+        """
+        Checks whether the given delegation depth makes a delegation possible
+        or not.
+
+        :param depth: depth that has to be checked
+        :type depth: int
+        :return: whether it is possible or not
+        :rtype: bool
+        """
+
+        if self.MAX_DELEGATION_DEPTH == -1:
+            return True
+        if depth < self.MAX_DELEGATION_DEPTH:
+            return True
+
+        self.__logwarn("Maximum Delegation Depth is reached")
+        return False
 
     def __precom(self, proposal, delegation):
         """
@@ -1102,25 +1127,6 @@ class DelegationManager(object):
 
         return new.auction_id
 
-    def _check_depth(self, depth):
-        """
-        Checks whether the given delegation depth makes a delegation possible
-        or not.
-
-        :param depth: depth that has to be checked
-        :type depth: int
-        :return: whether it is possible or not
-        :rtype: bool
-        """
-
-        if self.MAX_DELEGATION_DEPTH == -1:
-            return True
-        if depth < self.MAX_DELEGATION_DEPTH:
-            return True
-
-        self.__logwarn("Maximum Delegation Depth is reached")
-        return False
-
     def do_step(self, delegation_ids):
         """
         Performs a step for all delegations with a given Id
@@ -1143,7 +1149,6 @@ class DelegationManager(object):
                 self.__logwarn("Too many TIMEOUTS for the contractor \""+str(delegation.get_contractor())
                                + "\" of the auction with the ID "+str(delegation.auction_id)
                                + "! Will try to find a new contractor.")
-                contractor_name = delegation.get_contractor()
                 delegation.fail_current_delegation()  # unregisters goal
                 self.__start_auction(delegation)
 
