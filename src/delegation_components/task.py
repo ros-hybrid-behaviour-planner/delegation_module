@@ -35,9 +35,10 @@ class Task(object):
         else:
             self.__employers = employers
 
-    def get_auction_id(self):
+    @property
+    def auction_id(self):
         """
-        Gets the ID of the auction corresponding to this task
+        The ID of the auction corresponding to this task
 
         :return: the auction ID
         :rtype: int
@@ -45,7 +46,8 @@ class Task(object):
 
         return self.__auction_id
 
-    def get_auctioneer_name(self):
+    @property
+    def auctioneer_name(self):
         """
         Gets the name of the auctioneer (my employer)
 
@@ -55,9 +57,10 @@ class Task(object):
 
         return self.__auctioneer_name
 
+    @property
     def goal_name(self):
         """
-        Gets the name of corresponding goal
+        The name of corresponding goal
 
         :return: name of the goal
         :rtype: str

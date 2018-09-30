@@ -70,6 +70,8 @@ class GoalWrapperBase(object):
         else:
             return self._goal
 
+    # ------ Abstract Methods ------
+
     @abstractmethod
     def get_goal_representation(self):
         """

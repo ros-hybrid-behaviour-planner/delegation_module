@@ -139,7 +139,7 @@ class DelegationManager(object):
 
         # fail all current tasks
         for task in self.__tasks:
-            self.fail_task(goal_name=task.goal_name())
+            self.fail_task(goal_name=task.goal_name)
         self.__logwarn("Stopping services and topics")
         self.__stop_services()
         self.__stop_topics()
@@ -802,7 +802,7 @@ class DelegationManager(object):
         """
 
         for task in self.__tasks:
-            if task.goal_name() == goal_name:
+            if task.goal_name == goal_name:
                 return task
 
         raise LookupError("No task with the goal named " + str(goal_name))
@@ -1044,7 +1044,7 @@ class DelegationManager(object):
 
         # send a failure right, if needed
         try:
-            self.__send_failure(auctioneer_name=task.get_auctioneer_name(), auction_id=task.get_auction_id())
+            self.__send_failure(auctioneer_name=task.auctioneer_name, auction_id=task.auction_id)
         except DelegationServiceError as e:
             rospy.logerr("Failure Message raised following error: "+e.message)
             pass
