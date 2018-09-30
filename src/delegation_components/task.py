@@ -26,14 +26,14 @@ class Task(object):
         :type employers: list(str)
         """
 
-        self.__goal_name = goal_name
-        self.__auction_id = auction_id
-        self.__auctioneer_name = auctioneer_name
-        self.__depth = depth
+        self._goal_name = goal_name
+        self._auction_id = auction_id
+        self._auctioneer_name = auctioneer_name
+        self._depth = depth
         if employers is None:
-            self.__employers = []
+            self._employers = []
         else:
-            self.__employers = employers
+            self._employers = employers
 
     @property
     def auction_id(self):
@@ -44,7 +44,7 @@ class Task(object):
         :rtype: int
         """
 
-        return self.__auction_id
+        return self._auction_id
 
     @property
     def auctioneer_name(self):
@@ -55,7 +55,7 @@ class Task(object):
         :rtype: str
         """
 
-        return self.__auctioneer_name
+        return self._auctioneer_name
 
     @property
     def goal_name(self):
@@ -66,7 +66,7 @@ class Task(object):
         :rtype: str
         """
 
-        return self.__goal_name
+        return self._goal_name
 
     @property
     def depth(self):
@@ -77,7 +77,7 @@ class Task(object):
         :rtype: int
         """
 
-        return self.__depth
+        return self._depth
 
     @property
     def employers(self):
@@ -88,4 +88,4 @@ class Task(object):
         :rtype: list(str)
         """
 
-        return self.__employers
+        return self._employers

@@ -33,29 +33,29 @@ class Delegation(object):
         :type max_timeout_steps: int
         """
 
-        self.__goal_wrapper = goal_wrapper
-        self.__auction_id = auction_id
-        self.__client_id = client_id
-        self.__auction_steps_max = auction_steps
-        self.__auction_steps = auction_steps
-        self.__proposals = []
-        self.__forbidden_bidders = []
-        self.__contractor = ""
-        self.__got_contractor = False
+        self._goal_wrapper = goal_wrapper
+        self._auction_id = auction_id
+        self._client_id = client_id
+        self._auction_steps_max = auction_steps
+        self._auction_steps = auction_steps
+        self._proposals = []
+        self._forbidden_bidders = []
+        self._contractor = ""
+        self._got_contractor = False
         self.state = DelegationState()
-        self.__depth = depth
-        self.__max_timeout_steps = max_timeout_steps
-        self.__timeout_steps = 0
+        self._depth = depth
+        self._max_timeout_steps = max_timeout_steps
+        self._timeout_steps = 0
 
     def __del__(self):
         """
         Destructor for the delegation
         """
 
-        del self.__proposals[:]
-        del self.__forbidden_bidders[:]
+        del self._proposals[:]
+        del self._forbidden_bidders[:]
         del self.state
-        del self.__goal_wrapper
+        del self._goal_wrapper
 
     # ------- Manipulating and checking auction steps -------
 
@@ -68,10 +68,10 @@ class Delegation(object):
         :rtype: bool
         """
 
-        if self.__auction_steps > 0:
-            self.__auction_steps -= 1
+        if self._auction_steps > 0:
+            self._auction_steps -= 1
 
-        return self.__auction_steps <= 0
+        return self._auction_steps <= 0
 
     def end_auction_next_step(self):
         """
@@ -79,14 +79,14 @@ class Delegation(object):
         call of DelegationManager.do_step()
         """
 
-        self.__auction_steps = 1
+        self._auction_steps = 1
 
     def reset_steps(self):
         """
         Resets the current auction_steps to the defined max-value
         """
 
-        self.__auction_steps = self.__auction_steps_max
+        self._auction_steps = self._auction_steps_max
 
     # ------- Proposals -------
 
@@ -100,11 +100,11 @@ class Delegation(object):
         """
 
         name = proposal.name
-        if self.__forbidden_bidders.__contains__(name):
+        if self._forbidden_bidders.__contains__(name):
             raise Warning("Proposal wont be added, bidder " + str(name) +
                           " is forbidden")
 
-        bisect.insort(a=self.__proposals, x=proposal)
+        bisect.insort(a=self._proposals, x=proposal)
 
     def remove_proposal(self, proposal):
         """
@@ -115,7 +115,7 @@ class Delegation(object):
         :type proposal: Proposal
         """
 
-        self.__proposals.remove(proposal)
+        self._proposals.remove(proposal)
 
     def get_best_proposal(self):
         """
@@ -129,14 +129,14 @@ class Delegation(object):
         if not self.has_proposals():
             raise LookupError("Got no proposals")
 
-        return self.__proposals[0]
+        return self._proposals[0]
 
     def reset_proposals(self):
         """
         Removes all given proposals for this delegation
         """
 
-        del self.__proposals[:]
+        del self._proposals[:]
 
     def has_proposals(self):
         """
@@ -146,7 +146,7 @@ class Delegation(object):
         :rtype: bool
         """
 
-        if len(self.__proposals) > 0:
+        if len(self._proposals) > 0:
             return True
         return False
 
@@ -161,7 +161,7 @@ class Delegation(object):
         :type name: str
         """
 
-        self.__forbidden_bidders.append(name)
+        self._forbidden_bidders.append(name)
 
     def is_forbidden(self, name):
         """
@@ -173,14 +173,14 @@ class Delegation(object):
         :rtype: bool
         """
 
-        return self.__forbidden_bidders.__contains__(name)
+        return self._forbidden_bidders.__contains__(name)
 
     def reset_forbidden(self):
         """
         Resets the list of forbidden bidders
         """
 
-        self.__forbidden_bidders = []
+        self._forbidden_bidders = []
 
     def allow_bidder(self, name):
         """
@@ -190,8 +190,8 @@ class Delegation(object):
         :type name: str
         """
 
-        if self.__forbidden_bidders.__contains__(name):
-            self.__forbidden_bidders.remove(name)
+        if self._forbidden_bidders.__contains__(name):
+            self._forbidden_bidders.remove(name)
 
     # ------- Contractors -------
 
@@ -205,11 +205,11 @@ class Delegation(object):
         :raises DelegationContractorError: if contractor already chosen
         """
 
-        if self.__got_contractor:
+        if self._got_contractor:
             raise DelegationContractorError("Contractor already chosen")
 
-        self.__contractor = name
-        self.__got_contractor = True
+        self._contractor = name
+        self._got_contractor = True
         self.state.set_delegated_running()
 
     def get_contractor(self):
@@ -221,18 +221,18 @@ class Delegation(object):
         :raises DelegationContractorError: if no contractor is already chosen
         """
 
-        if not self.__got_contractor:
+        if not self._got_contractor:
             raise DelegationContractorError("No contractor chosen")
 
-        return self.__contractor
+        return self._contractor
 
     def remove_contractor(self):
         """
         Removes the contractor if set
         """
 
-        self.__contractor = ""
-        self.__got_contractor = False
+        self._contractor = ""
+        self._got_contractor = False
 
     # ------- Goal -------
 
@@ -244,7 +244,7 @@ class Delegation(object):
         :rtype: str
         """
 
-        return self.__goal_wrapper.get_goal_representation()
+        return self._goal_wrapper.get_goal_representation()
 
     def get_goal_name(self):
         """
@@ -254,7 +254,7 @@ class Delegation(object):
         :rtype: str
         """
 
-        return self.__goal_wrapper.goal_name
+        return self._goal_wrapper.goal_name
 
     def send_goal(self, name):
         """
@@ -267,7 +267,7 @@ class Delegation(object):
         :type name: str
         """
 
-        self.__goal_wrapper.send_goal(name=name)
+        self._goal_wrapper.send_goal(name=name)
 
     def terminate_goal(self):
         """
@@ -276,7 +276,7 @@ class Delegation(object):
         If a Exception is raised in the goalwrapper it will be forwarded
         """
 
-        self.__goal_wrapper.terminate_goal()
+        self._goal_wrapper.terminate_goal()
 
     def check_if_goal_finished(self):
         """
@@ -288,7 +288,7 @@ class Delegation(object):
         :rtype: bool
         """
 
-        return self.__goal_wrapper.check_goal_finished()
+        return self._goal_wrapper.check_goal_finished()
 
     # ------- Auction and Contract -------
 
@@ -330,13 +330,13 @@ class Delegation(object):
         :rtype: bool
         """
 
-        if self.__goal_wrapper.check_if_still_alive():
-            self.__timeout_steps = 0
+        if self._goal_wrapper.check_if_still_alive():
+            self._timeout_steps = 0
             return True
 
-        self.__timeout_steps += 1
+        self._timeout_steps += 1
 
-        if self.__timeout_steps >= self.__max_timeout_steps:
+        if self._timeout_steps >= self._max_timeout_steps:
             return False
         else:
             return True
@@ -381,7 +381,7 @@ class Delegation(object):
         :rtype: int
         """
 
-        return self.__auction_id
+        return self._auction_id
 
     @property
     def client_id(self):
@@ -392,7 +392,7 @@ class Delegation(object):
         :rtype: int
         """
 
-        return self.__client_id
+        return self._client_id
 
     @property
     def depth(self):
@@ -403,7 +403,7 @@ class Delegation(object):
         :rtype: int
         """
 
-        return self.__depth
+        return self._depth
 
 
 class Proposal(object):
@@ -422,8 +422,8 @@ class Proposal(object):
         :type value: float
         """
 
-        self.__name = name
-        self.__value = value
+        self._name = name
+        self._value = value
 
     def __cmp__(self, other):
         """
@@ -440,7 +440,7 @@ class Proposal(object):
         :rtype: str
         """
 
-        return "("+str(self.__name)+", "+str(self.__value)+")"
+        return "(" + str(self._name) + ": " + str(self._value) + ")"
 
     @property
     def value(self):
@@ -451,7 +451,7 @@ class Proposal(object):
         :rtype: float
         """
 
-        return self.__value
+        return self._value
 
     @property
     def name(self):
@@ -462,7 +462,7 @@ class Proposal(object):
         :rtype: str
         """
 
-        return self.__name
+        return self._name
 
 
 class DelegationState(object):
@@ -478,7 +478,7 @@ class DelegationState(object):
         starts always in READY
         """
 
-        self.__state_id = 0
+        self._state_id = 0
 
     def __repr__(self):
         """
@@ -487,13 +487,13 @@ class DelegationState(object):
         :return: string, that represents the state
         """
 
-        if self.__state_id == 0:
+        if self._state_id == 0:
             return "READY"
-        elif self.__state_id == 1:
+        elif self._state_id == 1:
             return "WAITING_FOR_PROPOSALS"
-        elif self.__state_id == 2:
+        elif self._state_id == 2:
             return "DELEGATED_RUNNING"
-        elif self.__state_id == 3:
+        elif self._state_id == 3:
             return "FINISHED"
         else:
             return "UNSPECIFIED"
@@ -506,7 +506,7 @@ class DelegationState(object):
         :rtype: bool
         """
 
-        return self.__state_id == 0
+        return self._state_id == 0
 
     def is_waiting_for_proposals(self):
         """
@@ -516,7 +516,7 @@ class DelegationState(object):
         :rtype: bool
         """
 
-        return self.__state_id == 1
+        return self._state_id == 1
 
     def is_delegated_running(self):
         """
@@ -526,7 +526,7 @@ class DelegationState(object):
         :rtype: bool
         """
 
-        return self.__state_id == 2
+        return self._state_id == 2
 
     def is_finished(self):
         """
@@ -536,32 +536,32 @@ class DelegationState(object):
         :rtype: bool
         """
 
-        return self.__state_id == 3
+        return self._state_id == 3
 
     def set_ready(self):
         """
         Sets state to READY
         """
 
-        self.__state_id = 0
+        self._state_id = 0
 
     def set_waiting_for_proposal(self):
         """
         Sets state to WAITING_FOR_PROPOSALS
         """
 
-        self.__state_id = 1
+        self._state_id = 1
 
     def set_delegated_running(self):
         """
         Sets state to DELEGATED_RUNNING
         """
 
-        self.__state_id = 2
+        self._state_id = 2
 
     def set_finished(self):
         """
         Sets state to FINISHED
         """
 
-        self.__state_id = 3
+        self._state_id = 3

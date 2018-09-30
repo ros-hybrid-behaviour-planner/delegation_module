@@ -237,10 +237,10 @@ class MockedDelegationCommunicator(object):
         self._manager_name = manager_name
         self._service_prefix = manager_name + '/'
         self._cfp_publisher = rospy.Publisher(name=DelegationManager.cfp_topic_name, data_class=CFP, queue_size=10)
-        self._cfp_subscriber = rospy.Subscriber(name=DelegationManager.cfp_topic_name, data_class=CFP, callback=self.__cfp_callback)
-        self._precom_service = rospy.Service(name=self._name + DelegationManager.precom_suffix, service_class=Precommit, handler=self.__precom_callback)
-        self._propose_service = rospy.Service(name=self._name + DelegationManager.propose_suffix, service_class=Propose, handler=self.__propose_callback)
-        self._failure_service = rospy.Service(name=self._name + DelegationManager.failure_suffix, service_class=Failure, handler=self.__failure_callback)
+        self._cfp_subscriber = rospy.Subscriber(name=DelegationManager.cfp_topic_name, data_class=CFP, callback=self._cfp_callback)
+        self._precom_service = rospy.Service(name=self._name + DelegationManager.precom_suffix, service_class=Precommit, handler=self._precom_callback)
+        self._propose_service = rospy.Service(name=self._name + DelegationManager.propose_suffix, service_class=Propose, handler=self._propose_callback)
+        self._failure_service = rospy.Service(name=self._name + DelegationManager.failure_suffix, service_class=Failure, handler=self._failure_callback)
         # Precom
         self.PAcceptance = False
         self.PBidding = False
@@ -262,9 +262,9 @@ class MockedDelegationCommunicator(object):
         Starts all Services
         """
 
-        self._precom_service = rospy.Service(name=self._name + DelegationManager.precom_suffix, service_class=Precommit, handler=self.__precom_callback)
-        self._propose_service = rospy.Service(name=self._name + DelegationManager.propose_suffix, service_class=Propose, handler=self.__propose_callback)
-        self._failure_service = rospy.Service(name=self._name + DelegationManager.failure_suffix, service_class=Failure, handler=self.__failure_callback)
+        self._precom_service = rospy.Service(name=self._name + DelegationManager.precom_suffix, service_class=Precommit, handler=self._precom_callback)
+        self._propose_service = rospy.Service(name=self._name + DelegationManager.propose_suffix, service_class=Propose, handler=self._propose_callback)
+        self._failure_service = rospy.Service(name=self._name + DelegationManager.failure_suffix, service_class=Failure, handler=self._failure_callback)
 
     def __del__(self):
         self.stop_communication()
@@ -280,7 +280,7 @@ class MockedDelegationCommunicator(object):
         self._propose_service.shutdown()
         self._failure_service.shutdown()
 
-    def __precom_callback(self, request):
+    def _precom_callback(self, request):
 
         print("Got Precom Request")
 
@@ -296,7 +296,7 @@ class MockedDelegationCommunicator(object):
 
         return response
 
-    def __propose_callback(self, request):
+    def _propose_callback(self, request):
 
         print("Got Propose Request")
 
@@ -305,7 +305,7 @@ class MockedDelegationCommunicator(object):
 
         return ProposeResponse()
 
-    def __failure_callback(self, request):
+    def _failure_callback(self, request):
 
         print("Got Failure Request")
 
@@ -314,7 +314,7 @@ class MockedDelegationCommunicator(object):
 
         return FailureResponse()
 
-    def __cfp_callback(self, msg):
+    def _cfp_callback(self, msg):
 
         print("Got CFP")
 
