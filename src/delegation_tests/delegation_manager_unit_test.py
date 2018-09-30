@@ -340,13 +340,12 @@ class DelegationManagerTest(unittest.TestCase):
 
         # cost not computable
         uut = self.new_uut()
-        uut.check_possible_tasks
         response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth, delegation_members=self.standard_members)
         self.assertFalse(response.acceptance)
         self.assertFalse(response.still_biding)
 
         # max tasks = 0
-        self.dynrecClient.update_configuration({"max_tasks":0})
+        self.dynrecClient.update_configuration({"max_tasks": 0})
         uut = self.new_uut()
         uut.set_cost_function_evaluator(cost_function_evaluator=self.mocked_cost_eval, agent_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)
         response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth, delegation_members=self.standard_members)
@@ -354,7 +353,7 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertFalse(response.still_biding)
 
         # not possible anymore
-        self.dynrecClient.update_configuration({"max_tasks":1})
+        self.dynrecClient.update_configuration({"max_tasks": 1})
         uut = self.new_uut()
         uut.set_cost_function_evaluator(cost_function_evaluator=MockedCostEvaluator(cost=0, possibility=False), agent_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)
         response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth, delegation_members=self.standard_members)
@@ -363,7 +362,7 @@ class DelegationManagerTest(unittest.TestCase):
 
         # cost is worse now
         new_cost = old_proposal + 1
-        self.dynrecClient.update_configuration({"max_tasks":1})
+        self.dynrecClient.update_configuration({"max_tasks": 1})
         uut = self.new_uut()
         uut.set_cost_function_evaluator(cost_function_evaluator=MockedCostEvaluator(cost=new_cost, possibility=True), agent_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)
         response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth, delegation_members=self.standard_members)
@@ -372,7 +371,7 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertEqual(response.new_proposal, new_cost)
 
         # cost is exactly the same
-        self.dynrecClient.update_configuration({"max_tasks":-1})
+        self.dynrecClient.update_configuration({"max_tasks": -1})
         new_cost = old_proposal
         uut = self.new_uut()
         uut.set_cost_function_evaluator(cost_function_evaluator=MockedCostEvaluator(cost=new_cost, possibility=True), agent_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)

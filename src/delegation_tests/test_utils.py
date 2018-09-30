@@ -24,22 +24,43 @@ class MockedClient(DelegationClientBase):
         super(MockedClient, self).__init__()
         self.started_working = False
         self.successful_id = -1
+        self.goal_name = None
+        self.conditions = None
+        self.satisfaction_t = None
+        self.success_func = None
+        self._manager_active = True
+        self.step_done = False
+        self.terminated = False
+        self.own_cost = None
+        self.start_work_func = None
 
-    def delegate(self, goal_name):
+    def delegate(self, goal_name, conditions=None, own_cost=-1,
+                 satisfaction_threshold=1.0, success_function=None,
+                 start_work_function=None):
         """
-        NOT IMPLEMENTED
-
-        Will raise a RuntimeError
-        :raises RuntimeError: always
+        safes the given information
         """
-
-        raise RuntimeError("MockedClient cant delegate")
+        self.own_cost = own_cost
+        self.goal_name = goal_name
+        self.conditions = conditions
+        self.satisfaction_t = satisfaction_threshold
+        self.success_func = success_function
+        self.start_work_func = start_work_function
 
     def start_work_for_delegation(self, delegation_id):
         self.started_working = True
 
     def delegation_successful(self, delegation_id):
         self.successful_id = delegation_id
+
+    def do_step(self):
+        self.step_done = True
+
+    def terminate_all_delegations(self):
+        self.terminated = True
+
+    def toggle_manager_active(self):
+        self._manager_active = not self._manager_active
 
 
 class MockedCostEvaluator(CostEvaluatorBase):
@@ -153,6 +174,11 @@ class MockedDelegationManager(object):
         self.cfe = cost_function_evaluator
         self.agent_name = agent_name
         self.client_id = client_id
+
+    def remove_cost_function_evaluator(self):
+        self.cfe = None
+        self.agent_name = None
+        self.client_id = None
 
     def delegate(self, goal_wrapper, client_id, known_depth, auction_steps=DelegationManager.DEFAULT_AUCTION_STEPS, own_cost=-1):
         """
