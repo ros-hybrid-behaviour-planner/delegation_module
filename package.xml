@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>delegation_module</name>
-  <version>1.0.0</version>
-  <description>A package with generic capabilities for delegations and allocations in Multi-Agent-Systems/Multi-Robot-Systems</description>
+  <version>0.0.1</version>
+  <description>Generic capabilities for delegations and allocations in MRS/MAS</description>
 
   <!--Maintainers-->
   <maintainer email="v.mengers@campus.tu-berlin.de">Vito Mengers</maintainer>
