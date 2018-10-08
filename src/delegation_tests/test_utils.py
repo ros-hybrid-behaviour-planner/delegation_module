@@ -159,6 +159,7 @@ class MockedDelegationManager(object):
         self.known_depth = None
         self.start_service_prefix = None
         self.cost_computable = None
+        self.failed_goals = []
 
     def add_client(self, client_id):
         self.clients.append(client_id)
@@ -217,6 +218,9 @@ class MockedDelegationManager(object):
 
     def start_depth_service(self, prefix):
         self.start_service_prefix = prefix
+
+    def fail_task(self, goal_name):
+        self.failed_goals.append(goal_name)
 
 
 class MockedDelegationCommunicator(object):
