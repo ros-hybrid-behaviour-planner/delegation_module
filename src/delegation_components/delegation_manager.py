@@ -408,6 +408,14 @@ class DelegationManager(object):
             self._logwarn("Failure Message from source who is not its contractor")
             return response
 
+        if delegation.check_if_goal_finished():
+            self._loginfo("Delegation with ID " + str(delegation.auction_id) + " was successful")
+            delegation.finish_delegation()
+            client = DelegationClientBase.get_client(client_id=delegation.client_id)
+            client.delegation_successful(delegation_id=delegation.auction_id)
+            return response
+
+        # delegation failed really and we have to try to find a new contractor
         delegation.fail_current_delegation()    # unregisters goal
         self._start_auction(delegation)
         return response
@@ -1139,7 +1147,7 @@ class DelegationManager(object):
         if len(delegation_ids) == 0:
             return
 
-        self._loginfo("Doing a step for auctions: " + " ".join(delegation_ids.__repr__()))
+        self._loginfo("Doing a step for auctions: " + delegation_ids.__repr__())
 
         delegations = [self.get_delegation(auction_id=i) for i in delegation_ids]
         waiting_delegations = [d for d in delegations if d.state.is_waiting_for_proposals()]
