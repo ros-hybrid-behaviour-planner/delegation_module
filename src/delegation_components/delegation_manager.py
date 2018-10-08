@@ -1056,6 +1056,7 @@ class DelegationManager(object):
         """
         Sends a message to the associated employer, that this task will no
         longer be pursued, if this is a task that comes from a different source
+        Will not do anything if the goal is not given via this DelegationManager
 
         :param goal_name: name of the goal that failed
         :type goal_name: str
