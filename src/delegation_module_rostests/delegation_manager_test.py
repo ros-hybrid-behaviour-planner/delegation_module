@@ -25,7 +25,7 @@ class DelegationManagerTest(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(DelegationManagerTest, self).__init__(*args, **kwargs)
-        rospy.init_node(name="DelegationManagerTest", log_level=rospy.WARN)
+        rospy.init_node(name="DelegationManagerTest", log_level=rospy.DEBUG)
 
     def setUp(self):
         self.mocked_DM_name = "MockedDM"
@@ -71,7 +71,7 @@ class DelegationManagerTest(unittest.TestCase):
             except rospy.ROSInterruptException:
                 pass
             rospy.sleep(0.3)
-            rospy.logwarn("NO DynRecClient")
+            rospy.logwarn("NO DynRecClient created yet, waiting for dynamic_reconfigure services.")
 
         return uut
 
@@ -86,13 +86,14 @@ class DelegationManagerTest(unittest.TestCase):
         curr_id = uut.get_new_auction_id()
         self.assertEqual(uut.get_new_auction_id(), curr_id + 1)
 
+    # TODO this test is running fine if executed manually from pycharm but makes problems from the commandline
     @unittest.SkipTest
     def test_multiple_tasks(self):
         """
         Tests adding tasks
         """
 
-        rospy.logwarn("test_multiple_tasks")
+        rospy.loginfo("test_multiple_tasks")
         
         id1, id2 = 1, 2
         n1, n2 = "name1", "name2"
@@ -145,7 +146,7 @@ class DelegationManagerTest(unittest.TestCase):
         """
         Tests CFP callback
         """
-        rospy.logwarn("test_cfp_callback")
+        rospy.loginfo("test_cfp_callback")
         uut = self.new_uut()
 
         auction_id = 1
@@ -179,7 +180,7 @@ class DelegationManagerTest(unittest.TestCase):
         """
         Tests delegate
         """
-        rospy.logwarn("test_delegate")
+        rospy.loginfo("test_delegate")
         uut = self.new_uut()
         goal_name = "test goal"
         test_goal = MockedGoalWrapper(name=goal_name)
@@ -204,7 +205,7 @@ class DelegationManagerTest(unittest.TestCase):
         """
         Tests PROPOSE callback
         """
-        rospy.logwarn("test_propose_callback")
+        rospy.loginfo("test_propose_callback")
         uut = self.new_uut()
         goal_name = "test_goal"
         test_goal = MockedGoalWrapper(name=goal_name)
@@ -226,7 +227,7 @@ class DelegationManagerTest(unittest.TestCase):
         """
         Tests the Ending of auctions
         """
-        rospy.logwarn("test_ending_auctions")
+        rospy.loginfo("test_ending_auctions")
         uut = self.new_uut()
         goal_name = "test_goal"
         test_goal = MockedGoalWrapper(name=goal_name)
@@ -321,12 +322,13 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertFalse(test_goal.goal_is_created())
         self.assertTrue(self.mocked_client.started_working)
 
+    # TODO this test is running fine if executed manually from pycharm but makes problems from the commandline
     @unittest.SkipTest
     def test_terminate(self):
         """
         Tests terminate
         """
-        rospy.logwarn("test_terminate")
+        rospy.loginfo("test_terminate")
         uut = self.new_uut()
         goal_name = "test_goal"
         test_goal = MockedGoalWrapper(name=goal_name)
@@ -355,7 +357,7 @@ class DelegationManagerTest(unittest.TestCase):
         """
         Tests PRECOM callback
         """
-        rospy.logwarn("test_precom_callback")
+        rospy.loginfo("test_precom_callback")
         auction_id = 1
         goal_name = "test_goal"
         old_proposal = 3
@@ -409,7 +411,7 @@ class DelegationManagerTest(unittest.TestCase):
         """
         Tests CostEvaluator adding/removing
         """
-        rospy.logwarn("test_cost_function_adding_removing")
+        rospy.loginfo("test_cost_function_adding_removing")
         uut = self.new_uut()
         uut.set_cost_function_evaluator(cost_function_evaluator=self.mocked_cost_eval, agent_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)
         self.assertTrue(uut.cost_computable)
@@ -420,7 +422,7 @@ class DelegationManagerTest(unittest.TestCase):
         """
         Tests FAIL callback
         """
-        rospy.logwarn("test_fail_task")
+        rospy.loginfo("test_fail_task")
         uut = self.new_uut()
         auction_id = 1
         goal_name = "test goal"
@@ -438,7 +440,7 @@ class DelegationManagerTest(unittest.TestCase):
         """
         Tests end task
         """
-        rospy.logwarn("test_end_task")
+        rospy.loginfo("test_end_task")
         uut = self.new_uut()
         auction_id = 1
         goal_name = "test goal"
