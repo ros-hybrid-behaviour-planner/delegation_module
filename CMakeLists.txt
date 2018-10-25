@@ -197,6 +197,8 @@ include_directories(
 # endif()
 
 ## Add folders to be run by python nosetests
-catkin_add_nosetests(src/delegation_tests)
+catkin_add_nosetests(src/delegation_module_tests)
 
 find_package(rostest REQUIRED)
+add_rostest(test/delegation_manager.test)
+

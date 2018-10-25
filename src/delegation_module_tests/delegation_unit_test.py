@@ -7,7 +7,7 @@ Unit tests for the Delegation and Proposal classes
 import unittest
 from delegation_components.delegation import Delegation, Proposal
 from delegation_components.delegation_errors import DelegationContractorError
-from delegation_tests.test_utils import MockedGoalWrapper
+from .test_utils import MockedGoalWrapper
 
 
 class DelegationTest(unittest.TestCase):

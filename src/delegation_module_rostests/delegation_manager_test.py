@@ -4,12 +4,13 @@ Unit tests for the DelegationManager
 
 Needs a running ROSCORE!
 
-@author: Mengers
+@author: Mengers, hrabia
 """
 
 import unittest
 import rospy
-from delegation_tests.test_utils import MockedDelegationCommunicator, MockedCostEvaluator, MockedGoalWrapper, MockedClient
+import rostest
+from delegation_module_tests.test_utils import MockedDelegationCommunicator, MockedCostEvaluator, MockedGoalWrapper, MockedClient
 from delegation_components.delegation_manager import DelegationManager
 from delegation_components.task import Task
 from delegation_components.delegation_errors import DelegationError
@@ -22,21 +23,25 @@ class DelegationManagerTest(unittest.TestCase):
     Unit tests for the DelegationManager
     """
 
+    def __init__(self, *args, **kwargs):
+        super(DelegationManagerTest, self).__init__(*args, **kwargs)
+        rospy.init_node(name="DelegationManagerTest", log_level=rospy.WARN)
+
     def setUp(self):
-        rospy.init_node(name="TestNode")
         self.mocked_DM_name = "MockedDM"
         self.mocked_manager_name = "MockedManager"
         self.uut_name = "UUT"
         self.uut_mocked_manager_name = "UUTManager"
         self.mocked_client = MockedClient()
         self.mocked_client_id = self.mocked_client.id
-        self.uut = DelegationManager(name=self.uut_name)
-        self.dynrecClient = DynRecClient("UUT/delegation_module_parameters")
-        self.dynrecClient.update_configuration({"max_tasks": 1}) # default for tests is 1
         self.mocked_DM = MockedDelegationCommunicator(name=self.mocked_DM_name, manager_name=self.mocked_manager_name)
         self.mocked_cost_eval = MockedCostEvaluator(cost=0, possibility=True)
         self.standard_depth = 2
         self.standard_members = ["Member1", "Member2"]
+        self.uut = self.new_uut()
+        rospy.sleep(0.3)
+        self.dynrecClient = DynRecClient("UUT/delegation_module_parameters")
+        self.dynrecClient.update_configuration({"max_tasks": 1})
 
     def tearDown(self):
         self.mocked_DM.__del__()
@@ -51,28 +56,44 @@ class DelegationManagerTest(unittest.TestCase):
         :rtype: DelegationManager
         """
 
-        self.uut.__del__()
+        if hasattr(self, 'uut'):
+            self.uut.__del__()
+            self.uut = None
+            rospy.sleep(0.5)
         uut = DelegationManager(name=self.uut_name)
         self.mocked_DM.reset_messages()
         self.uut = uut
+
+        self.dynrecClient = None
+        while not self.dynrecClient:
+            try:
+                self.dynrecClient = DynRecClient("/UUT/delegation_module_parameters", timeout=1)
+            except rospy.ROSInterruptException:
+                pass
+            rospy.sleep(0.3)
+            rospy.logwarn("NO DynRecClient")
+
         return uut
 
     def test_setter_getter(self):
         """
         Tests the properties
         """
-
+        rospy.loginfo("")
         uut = self.new_uut()
 
         self.assertEqual(uut.name, self.uut_name)
         curr_id = uut.get_new_auction_id()
         self.assertEqual(uut.get_new_auction_id(), curr_id + 1)
 
+    @unittest.SkipTest
     def test_multiple_tasks(self):
         """
         Tests adding tasks
         """
 
+        rospy.logwarn("test_multiple_tasks")
+        
         id1, id2 = 1, 2
         n1, n2 = "name1", "name2"
         g1, g2 = "goal1", "goal2"
@@ -81,24 +102,25 @@ class DelegationManagerTest(unittest.TestCase):
 
         # Max Tasks = -1 (infinite)
         self.dynrecClient.update_configuration({"max_tasks":-1})
+        rospy.sleep(0.3)
         uut = self.new_uut()
         rospy.sleep(1)
         self.assertTrue(uut.check_possible_tasks)
         uut.add_task(new_task=task2)
         uut.add_task(new_task=task1)
         self.assertTrue(uut.check_possible_tasks)
-        uut.__del__()
 
         # Max Tasks = 0
         self.dynrecClient.update_configuration({"max_tasks":0})
+        rospy.sleep(0.3)
         uut = self.new_uut()
         self.assertFalse(uut.check_possible_tasks)
         self.assertRaises(DelegationError, uut.add_task, task1)
         self.assertRaises(LookupError, uut.get_task_by_goal_name, g1)
-        uut.__del__()
 
         # Max tasks = 1
         self.dynrecClient.update_configuration({"max_tasks":1})
+        rospy.sleep(0.3)
         uut = self.new_uut()
         self.assertTrue(uut.check_possible_tasks)
         uut.add_task(new_task=task1)
@@ -106,10 +128,10 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertRaises(DelegationError, uut.add_task, task2)
         self.assertEqual(uut.get_task_by_goal_name(goal_name=g1), task1)
         self.assertRaises(LookupError, uut.get_task_by_goal_name, g2)
-        uut.__del__()
 
         # Max tasks > 1
         self.dynrecClient.update_configuration({"max_tasks":2})
+        rospy.sleep(0.3)
         uut = self.new_uut()
         self.assertTrue(uut.check_possible_tasks)
         uut.add_task(new_task=task1)
@@ -118,13 +140,12 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertEqual(uut.get_task_by_goal_name(goal_name=g1), task1)
         self.assertEqual(uut.get_task_by_goal_name(goal_name=g2), task2)
         self.assertFalse(uut.check_possible_tasks)
-        uut.__del__()
 
     def test_cfp_callback(self):
         """
         Tests CFP callback
         """
-
+        rospy.logwarn("test_cfp_callback")
         uut = self.new_uut()
 
         auction_id = 1
@@ -158,7 +179,7 @@ class DelegationManagerTest(unittest.TestCase):
         """
         Tests delegate
         """
-
+        rospy.logwarn("test_delegate")
         uut = self.new_uut()
         goal_name = "test goal"
         test_goal = MockedGoalWrapper(name=goal_name)
@@ -183,7 +204,7 @@ class DelegationManagerTest(unittest.TestCase):
         """
         Tests PROPOSE callback
         """
-
+        rospy.logwarn("test_propose_callback")
         uut = self.new_uut()
         goal_name = "test_goal"
         test_goal = MockedGoalWrapper(name=goal_name)
@@ -205,7 +226,7 @@ class DelegationManagerTest(unittest.TestCase):
         """
         Tests the Ending of auctions
         """
-
+        rospy.logwarn("test_ending_auctions")
         uut = self.new_uut()
         goal_name = "test_goal"
         test_goal = MockedGoalWrapper(name=goal_name)
@@ -300,11 +321,12 @@ class DelegationManagerTest(unittest.TestCase):
         self.assertFalse(test_goal.goal_is_created())
         self.assertTrue(self.mocked_client.started_working)
 
+    @unittest.SkipTest
     def test_terminate(self):
         """
         Tests terminate
         """
-
+        rospy.logwarn("test_terminate")
         uut = self.new_uut()
         goal_name = "test_goal"
         test_goal = MockedGoalWrapper(name=goal_name)
@@ -333,7 +355,7 @@ class DelegationManagerTest(unittest.TestCase):
         """
         Tests PRECOM callback
         """
-
+        rospy.logwarn("test_precom_callback")
         auction_id = 1
         goal_name = "test_goal"
         old_proposal = 3
@@ -346,6 +368,7 @@ class DelegationManagerTest(unittest.TestCase):
 
         # max tasks = 0
         self.dynrecClient.update_configuration({"max_tasks": 0})
+        rospy.sleep(0.3)
         uut = self.new_uut()
         uut.set_cost_function_evaluator(cost_function_evaluator=self.mocked_cost_eval, agent_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)
         response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth, delegation_members=self.standard_members)
@@ -354,6 +377,7 @@ class DelegationManagerTest(unittest.TestCase):
 
         # not possible anymore
         self.dynrecClient.update_configuration({"max_tasks": 1})
+        rospy.sleep(0.3)
         uut = self.new_uut()
         uut.set_cost_function_evaluator(cost_function_evaluator=MockedCostEvaluator(cost=0, possibility=False), agent_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)
         response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth, delegation_members=self.standard_members)
@@ -363,6 +387,7 @@ class DelegationManagerTest(unittest.TestCase):
         # cost is worse now
         new_cost = old_proposal + 1
         self.dynrecClient.update_configuration({"max_tasks": 1})
+        rospy.sleep(0.3)
         uut = self.new_uut()
         uut.set_cost_function_evaluator(cost_function_evaluator=MockedCostEvaluator(cost=new_cost, possibility=True), agent_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)
         response = self.mocked_DM.send_precom(target_name=self.uut_name, auction_id=auction_id, proposal_value=old_proposal, goal_name=goal_name, goal_representation=goal_name, depth=self.standard_depth, delegation_members=self.standard_members)
@@ -372,6 +397,7 @@ class DelegationManagerTest(unittest.TestCase):
 
         # cost is exactly the same
         self.dynrecClient.update_configuration({"max_tasks": -1})
+        rospy.sleep(0.3)
         new_cost = old_proposal
         uut = self.new_uut()
         uut.set_cost_function_evaluator(cost_function_evaluator=MockedCostEvaluator(cost=new_cost, possibility=True), agent_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)
@@ -383,7 +409,7 @@ class DelegationManagerTest(unittest.TestCase):
         """
         Tests CostEvaluator adding/removing
         """
-
+        rospy.logwarn("test_cost_function_adding_removing")
         uut = self.new_uut()
         uut.set_cost_function_evaluator(cost_function_evaluator=self.mocked_cost_eval, agent_name=self.uut_mocked_manager_name, client_id=self.mocked_client_id)
         self.assertTrue(uut.cost_computable)
@@ -394,7 +420,7 @@ class DelegationManagerTest(unittest.TestCase):
         """
         Tests FAIL callback
         """
-
+        rospy.logwarn("test_fail_task")
         uut = self.new_uut()
         auction_id = 1
         goal_name = "test goal"
@@ -412,7 +438,7 @@ class DelegationManagerTest(unittest.TestCase):
         """
         Tests end task
         """
-
+        rospy.logwarn("test_end_task")
         uut = self.new_uut()
         auction_id = 1
         goal_name = "test goal"
@@ -424,4 +450,5 @@ class DelegationManagerTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    rostest.rosrun('delegation_module', 'test_delegation_manager_node', DelegationManagerTest)
+    rospy.spin()

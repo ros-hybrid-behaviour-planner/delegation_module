@@ -4,7 +4,7 @@ Unit tests for DelegationClient
 @author: Mengers
 """
 
-from delegation_tests.test_utils import MockedDelegationManager, MockedCostEvaluator
+from .test_utils import MockedDelegationManager, MockedCostEvaluator
 from delegation_components.delegation_clients import DelegationClientBase
 from delegation_components.delegation_manager import DelegationManager
 import unittest
