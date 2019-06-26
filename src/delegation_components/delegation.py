@@ -1,7 +1,7 @@
 """
 Delegation and objects used by it, especially the Proposal
 
-@author: Mengers
+@author: Mengers, Hrabia
 """
 
 import bisect
@@ -404,6 +404,14 @@ class Delegation(object):
         """
 
         return self._depth
+
+    @property
+    def number_of_proposals(self):
+        """
+        Return the number of returned proposals for the auction
+        :return: number of proposals
+        """
+        return len(self._proposals)
 
 
 class Proposal(object):
