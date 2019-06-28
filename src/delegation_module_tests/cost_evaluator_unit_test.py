@@ -6,6 +6,7 @@ Unit tests for the Generic CostEvaluator
 
 from delegation_components.cost_evaluators import CostEvaluatorBase, CostParameters
 import unittest
+import math
 
 
 class CostEvaluator(CostEvaluatorBase):
@@ -40,7 +41,7 @@ class TestCostEvaluator(unittest.TestCase):
         Tests base functionality
         """
 
-        self.assertEqual(self.uut.last_cost, -1)
+        self.assertTrue(math.isnan(self.uut.last_cost))
         self.assertEqual(self.uut.last_possibility, False)
 
     def test_cost_evaluate(self):

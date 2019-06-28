@@ -5,7 +5,11 @@ Delegation and objects used by it, especially the Proposal
 """
 
 import bisect
+import math
 from delegation_errors import DelegationContractorError
+from cost_evaluators import CostEvaluatorBase
+
+import rospy
 
 
 class Delegation(object):
@@ -129,7 +133,12 @@ class Delegation(object):
         if not self.has_proposals():
             raise LookupError("Got no proposals")
 
-        return self._proposals[0]
+        best_proposal = self._proposals[0]
+
+        if math.isnan(best_proposal.value):  # == CostEvaluatorBase.IMPOSSIBLE_COSTS:
+            raise LookupError("Got only impossible proposals")
+
+        return best_proposal
 
     def reset_proposals(self):
         """
@@ -437,6 +446,12 @@ class Proposal(object):
         """
         Comparator for proposals
         """
+        if math.isnan(self.value) and math.isnan(other.value):
+            return 0
+        if math.isnan(self.value):
+            return 1
+        if math.isnan(other.value):
+            return -1
 
         return cmp(self.value, other.value)
 

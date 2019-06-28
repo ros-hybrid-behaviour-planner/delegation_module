@@ -53,6 +53,8 @@ class DelegationManager(object):
     MAX_DELEGATION_DEPTH = 5
     DEFAULT_AUCTION_STEPS = 1
 
+    REPLY_IMPOSSIBLE_PROPOSALS = False
+
     # ------ Initiation and Config ------
 
     def __init__(self, name=""):
@@ -143,6 +145,7 @@ class DelegationManager(object):
         self.MAX_CONSECUTIVE_TRIES = config.get("max_consecutive_tries", self.MAX_CONSECUTIVE_TRIES)
         self.MAX_DELEGATION_DEPTH = config.get("max_delegation_depth", self.MAX_DELEGATION_DEPTH)
         self.DEFAULT_AUCTION_STEPS = config.get("auction_steps", self.DEFAULT_AUCTION_STEPS)
+        self.REPLY_IMPOSSIBLE_PROPOSALS = config.get("reply_impossible_proposals", self.REPLY_IMPOSSIBLE_PROPOSALS)
         self._max_tasks = config.get("max_tasks", self._max_tasks)
 
         self._loginfo("Parameters updated:" +
@@ -458,7 +461,7 @@ class DelegationManager(object):
                                                                    depth=depth,
                                                                    members=members)
 
-        if goal_possible:
+        if goal_possible or self.REPLY_IMPOSSIBLE_PROPOSALS:
             self._loginfo("Sending a proposal of " + str(cost))
             try:
                 self._send_propose(cost, auctioneer_name, auction_id)
@@ -840,7 +843,7 @@ class DelegationManager(object):
             self._loginfo("Task is " + s)
         except DelegationPlanningWarning as e:
             self._loginfo("Goal not possible. PlannerMessage: " + str(e.message))
-            cost, goal_possible = -1, False
+            cost, goal_possible = CostEvaluatorBase.IMPOSSIBLE_COSTS, False
         return cost, goal_possible
 
     def _check_depth(self, depth):
@@ -1083,7 +1086,8 @@ class DelegationManager(object):
             rospy.logerr("Failure Message raised following error: "+e.message)
             pass
 
-    def delegate(self, goal_wrapper, client_id, auction_steps=None, own_cost=-1, known_depth=None):
+    def delegate(self, goal_wrapper, client_id, auction_steps=None, own_cost=CostEvaluatorBase.IMPOSSIBLE_COSTS,
+                 known_depth=None):
         """
         Makes a delegation for the goal and starts an auction for this
         delegation. Adds my own cost as a proposal if wanted.

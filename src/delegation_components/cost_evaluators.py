@@ -17,6 +17,8 @@ class CostEvaluatorBase(object):
 
     __metaclass__ = ABCMeta
 
+    IMPOSSIBLE_COSTS = float('nan')
+
     TASK_UTILIZATION_FACTOR = 1
     WORKLOAD_PROPORTION_FACTOR = -0.025
     ADDITIONAL_WORKLOAD_FACTOR = 1
@@ -58,7 +60,7 @@ class CostEvaluatorBase(object):
         Constructor, gives possibility and cost initial values
         """
 
-        self._last_cost = -1
+        self._last_cost = CostEvaluatorBase.IMPOSSIBLE_COSTS
         self._last_possibility = False
 
     def compute_cost_and_possibility(self, goal_representation, current_task_count, max_task_count, current_depth, max_depth, members, own_name):
@@ -88,7 +90,7 @@ class CostEvaluatorBase(object):
         """
 
         self._last_possibility = False
-        self._last_cost = -1
+        self._last_cost = CostEvaluatorBase.IMPOSSIBLE_COSTS
         try:
             parameters = self._plan_and_extract_parameters(goal_representation=goal_representation, own_name=own_name,
                                                            members=members, depth=current_depth, max_depth=max_depth,
