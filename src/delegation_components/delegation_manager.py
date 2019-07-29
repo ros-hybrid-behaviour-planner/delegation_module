@@ -301,12 +301,12 @@ class DelegationManager(object):
 
         if not self.check_possible_tasks:
             # not bidding if no new task possible right now or in general
-            self._loginfo("Wont bid, because i already have enough tasks or cannot take any")
+            self._loginfo("Wont bid, because " + self._name + " already has enough tasks or cannot take any")
             return response
 
         if not self._cost_computable:
             # no cost computation available
-            self._loginfo("Wont bid, because i cannot compute the cost")
+            self._loginfo("Wont bid, because " + self._name + " cannot compute the cost")
             return response
 
         new_cost, goal_possible = self._determine_cost_and_possibility(goal_representation=goal_representation,
@@ -356,7 +356,7 @@ class DelegationManager(object):
         auction_id = request.auction_id
         proposed_value = request.value
 
-        self._loginfo(str(bidder_name) + " proposed for my auction "
+        self._loginfo(str(bidder_name) + " proposed for " + str(self._name) + " auction "
                       + str(auction_id) + " with " + str(proposed_value))
 
         try:
