@@ -35,11 +35,9 @@ other half are parameters of the default cost-function (configure these to your 
 
 ## Origin of this package
 
-Author: Vito Mengers
-
-This package was created for my bachelor-thesis with the topic (german)
+This package was founded in the bachelor-thesis project of Vito Mengers with the topic (german)
 *"Automatisierte Zielzerlegung für Multi-Roboter-Systeme innerhalb eines hybriden Planungssystems"*
 (*translated: "Automated task decomposition within a hybrid behaviour network architecture of multi-robot-systems"*).
 It is used there inside an expansion of the *ROS Hybrid Behaviour Planner* (RHBP) 
-(see on [github](https://github.com/DAInamite/rhbp)).
+(see on [github](https://github.com/ros-hybrid-behaviour-planner/rhbp)).
  
