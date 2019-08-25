@@ -462,7 +462,7 @@ class DelegationManager(object):
                                                                    members=members)
 
         if goal_possible or self.REPLY_IMPOSSIBLE_PROPOSALS:
-            self._loginfo("Sending a proposal of " + str(cost))
+            self._loginfo("Goal is " + str(goal_possible) + ". Sending a proposal of " + str(cost))
             try:
                 self._send_propose(cost, auctioneer_name, auction_id)
             except DelegationServiceError as e:
@@ -842,7 +842,7 @@ class DelegationManager(object):
                 s = "impossible"
             self._loginfo("Task is " + s)
         except DelegationPlanningWarning as e:
-            self._loginfo("Goal not possible. PlannerMessage: " + str(e.message))
+            self._logwarn("Goal not possible. PlannerMessage: " + str(e.message))
             cost, goal_possible = CostEvaluatorBase.IMPOSSIBLE_COSTS, False
         return cost, goal_possible
 
